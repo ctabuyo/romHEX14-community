@@ -1,0 +1,318 @@
+[
+  {
+    "brand": "",
+    "name": "5M"
+  },
+  {
+    "brand": "",
+    "name": "6M"
+  },
+  {
+    "brand": "",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "",
+    "name": "CVT"
+  },
+  {
+    "brand": "",
+    "name": "DCT"
+  },
+  {
+    "brand": "",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "Audi",
+    "name": "5M"
+  },
+  {
+    "brand": "Audi",
+    "name": "6M"
+  },
+  {
+    "brand": "Audi",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "Audi",
+    "name": "Multitronic"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DL501"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DSG DQ800"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DSG6 DQ250"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DSG6 DQ250 MQB"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DSG7 DQ200"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DSG7 DQ200 MQB"
+  },
+  {
+    "brand": "Audi",
+    "name": "S-Tronic DSG7 DQ500"
+  },
+  {
+    "brand": "Audi",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "Audi",
+    "name": "Tiptronic"
+  },
+  {
+    "brand": "BMW",
+    "name": "5M"
+  },
+  {
+    "brand": "BMW",
+    "name": "6M"
+  },
+  {
+    "brand": "BMW",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "BMW",
+    "name": "DKG"
+  },
+  {
+    "brand": "BMW",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "MB",
+    "name": "5G-Tronic"
+  },
+  {
+    "brand": "MB",
+    "name": "5M"
+  },
+  {
+    "brand": "MB",
+    "name": "6M"
+  },
+  {
+    "brand": "MB",
+    "name": "7G-Tronic"
+  },
+  {
+    "brand": "MB",
+    "name": "7G-Tronic Plus"
+  },
+  {
+    "brand": "MB",
+    "name": "9G-Tronic"
+  },
+  {
+    "brand": "MB",
+    "name": "AMG SPEEDSHIFT DCT 7G"
+  },
+  {
+    "brand": "MB",
+    "name": "AMG SPEEDSHIFT DCT 8G"
+  },
+  {
+    "brand": "MB",
+    "name": "AMG SPEEDSHIFT MCT 7G"
+  },
+  {
+    "brand": "MB",
+    "name": "AMG SPEEDSHIFT MCT 9G"
+  },
+  {
+    "brand": "MB",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "Porsche",
+    "name": "5M"
+  },
+  {
+    "brand": "Porsche",
+    "name": "6M"
+  },
+  {
+    "brand": "Porsche",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "Porsche",
+    "name": "PDK"
+  },
+  {
+    "brand": "Porsche",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "Renault",
+    "name": "5M"
+  },
+  {
+    "brand": "Renault",
+    "name": "6M"
+  },
+  {
+    "brand": "Renault",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "Renault",
+    "name": "DCT"
+  },
+  {
+    "brand": "Renault",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "Seat",
+    "name": "5M"
+  },
+  {
+    "brand": "Seat",
+    "name": "6M"
+  },
+  {
+    "brand": "Seat",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG6 DQ250"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG6 DQ250 MQB"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG7 DQ200"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG7 DQ200 MQB"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG7 DQ381 MQB"
+  },
+  {
+    "brand": "Seat",
+    "name": "DSG7 DQ500"
+  },
+  {
+    "brand": "Seat",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "Skoda",
+    "name": "5M"
+  },
+  {
+    "brand": "Skoda",
+    "name": "6M"
+  },
+  {
+    "brand": "Skoda",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG6 DQ250"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG6 DQ250 MQB"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG7 DQ200"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG7 DQ200 MQB"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG7 DQ381 MQB"
+  },
+  {
+    "brand": "Skoda",
+    "name": "DSG7 DQ500"
+  },
+  {
+    "brand": "Skoda",
+    "name": "Switch gear"
+  },
+  {
+    "brand": "VW",
+    "name": "5M"
+  },
+  {
+    "brand": "VW",
+    "name": "6M"
+  },
+  {
+    "brand": "VW",
+    "name": "Automatic transmission"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG6 DQ250"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG6 DQ250 MQB"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG7 DQ200"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG7 DQ200 MQB"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG7 DQ381 MQB"
+  },
+  {
+    "brand": "VW",
+    "name": "DSG7 DQ500"
+  },
+  {
+    "brand": "VW",
+    "name": "Switch gear"
+  }
+]

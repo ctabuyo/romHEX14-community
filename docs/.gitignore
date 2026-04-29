@@ -1,0 +1,10 @@
+.venv/
+site/
+pdf/
+__pycache__/
+*.pyc
+.translate-cache/
+src/*/assets/screenshots/
+src/*/appendix-c-glossary.md
+src/*/appendix-d-changelog.md
+src/*/appendix-a-menus.md

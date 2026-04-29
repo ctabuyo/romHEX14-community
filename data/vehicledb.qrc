@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/data">
+        <file>ecus.json</file>
+        <file>models.json</file>
+        <file>gearboxes.json</file>
+    </qresource>
+</RCC>

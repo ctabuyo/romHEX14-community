@@ -1,0 +1,9 @@
+mkdocs==1.6.1
+mkdocs-material==9.5.49
+mkdocs-static-i18n==1.2.3
+mkdocs-with-pdf==0.9.3
+pymdown-extensions==10.12
+anthropic>=0.39.0
+PyYAML>=6.0
+pywinauto>=0.6.9
+Pillow>=10.0.0

@@ -1,0 +1,38 @@
+# Third-party binaries (don't commit DLLs)
+resources/*.dll
+
+# Build output
+build/
+*.obj
+*.o
+*.exe
+*.dll
+*.lib
+*.a
+*.pdb
+*.ilk
+*.exp
+
+# Qt generated
+*_autogen/
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qm
+
+# IDE / editor
+.vscode/
+.qtcreator/
+*.user
+*.user.*
+CMakeLists.txt.user
+.DS_Store
+Thumbs.db
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+build-installer/

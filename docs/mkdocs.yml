@@ -1,0 +1,137 @@
+site_name: romHEX 14 — User Manual
+site_description: Comprehensive user manual for romHEX 14 ECU calibration software
+site_url: https://example.com/docs/
+site_author: ctabuyo
+copyright: Copyright &copy; 2026 romHEX 14
+
+docs_dir: src
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+repo_url: https://github.com/ctabuyo/romHEX14-ECU-Tuning
+repo_name: ctabuyo/romHEX14-ECU-Tuning
+edit_uri: edit/master/docs/src/
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: zh
+          name: 简体中文
+          site_name: romHEX 14 — 用户手册
+          nav_translations:
+            Introduction: 简介
+            Installation: 安装
+            Quick Start: 快速开始
+            User Interface: 用户界面
+            Projects: 项目管理
+            A2L Import: A2L 导入
+            OLS Import: OLS 导入
+            KP Import: KP 导入
+            Hex Overview: 十六进制总览
+            Map Editor: 地图编辑器
+            Checksum Manager: 校验和管理器
+            Patches & Packs: 补丁与包
+            AI Functions: AI 功能
+            View Sync: 视图同步
+            Settings & Localization: 设置与本地化
+            Troubleshooting: 故障排除
+            Appendix A — Menu & Shortcut Reference: 附录 A — 菜单与快捷键
+            Appendix B — File Formats: 附录 B — 文件格式
+            Appendix C — Glossary EN/ZH: 附录 C — 术语表 EN/ZH
+            Appendix D — Changelog: 附录 D — 更新日志
+  - with-pdf:
+      author: ctabuyo
+      cover_title: romHEX 14 — User Manual
+      cover_subtitle: Comprehensive Reference & Workflow Guide
+      output_path: ../pdf/romHEX14-manual-en.pdf
+      enabled_if_env: ENABLE_PDF_EXPORT
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - Introduction: 01-introduction.md
+  - Installation: 02-installation.md
+  - Quick Start: 03-quick-start.md
+  - User Interface: 04-user-interface.md
+  - Projects: 05-projects.md
+  - A2L Import: 06-a2l-import.md
+  - OLS Import: 07-ols-import.md
+  - KP Import: 08-kp-import.md
+  - Hex Overview: 09-hex-overview.md
+  - Map Editor: 10-map-editor.md
+  - Checksum Manager: 11-checksum-manager.md
+  - Patches & Packs: 12-patches-packs.md
+  - AI Functions: 13-ai-functions.md
+  - View Sync: 14-view-sync.md
+  - Settings & Localization: 15-settings.md
+  - Troubleshooting: 16-troubleshooting.md
+  - Appendix A — Menu & Shortcut Reference: appendix-a-menus.md
+  - Appendix B — File Formats: appendix-b-formats.md
+  - Appendix C — Glossary EN/ZH: appendix-c-glossary.md
+  - Appendix D — Changelog: appendix-d-changelog.md

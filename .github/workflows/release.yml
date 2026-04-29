@@ -1,0 +1,160 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      changelog:
+        description: 'Release changelog (shown in release notes)'
+        required: false
+        default: 'Community Edition release'
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: ver
+        run: |
+          VER=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=romhex14-community$VER" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_mingw'
+          tools: 'tools_mingw1310'
+      - name: Configure
+        shell: bash
+        run: |
+          # Use Qt's bundled MinGW 13.1, not the system GCC 15
+          MINGW_BIN="$IQTA_TOOLS/mingw1310_64/bin"
+          if [ -d "$MINGW_BIN" ]; then
+            echo "Using Qt MinGW: $MINGW_BIN"
+            echo "$MINGW_BIN" >> "$GITHUB_PATH"
+          else
+            echo "WARNING: Qt MinGW not found at $MINGW_BIN"
+            ls "$IQTA_TOOLS/" || true
+          fi
+      - name: CMake Configure
+        run: cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DRX14_PRO_BUILD=OFF
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Deploy
+        shell: cmd
+        run: |
+          mkdir deploy
+          copy build\rx14.exe deploy\
+          windeployqt deploy\rx14.exe --no-translations --no-opengl-sw
+      - name: Package
+        run: |
+          cd deploy
+          7z a ../romHEX14-Community-${{ needs.version.outputs.version }}-windows-x64.zip *
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: romHEX14-Community-*.zip
+
+  macos:
+    needs: version
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: 'mac'
+          target: 'desktop'
+          arch: 'clang_64'
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DRX14_PRO_BUILD=OFF
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Deploy
+        run: |
+          macdeployqt build/rx14.app -dmg
+          mv build/rx14.dmg romHEX14-Community-${{ needs.version.outputs.version }}-macos.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: romHEX14-Community-*.dmg
+
+  linux:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
+            libgl-dev libxkbcommon-dev libfuse2 libxcb-cursor0 zlib1g-dev
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DRX14_PRO_BUILD=OFF -DCMAKE_INSTALL_PREFIX=/usr
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Package AppImage
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp build/rx14 AppDir/usr/bin/
+          cp resources/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/rx14.png
+          printf '[Desktop Entry]\nName=romHEX 14 Community\nExec=rx14\nIcon=rx14\nType=Application\nCategories=Development;Engineering;\n' > AppDir/usr/share/applications/rx14.desktop
+          export QMAKE=$(which qmake6 || which qmake)
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
+          for f in *.AppImage; do
+            case "$f" in linuxdeploy*) continue ;; esac
+            mv "$f" "romHEX14-Community-${{ needs.version.outputs.version }}-linux-x86_64.AppImage"
+            break
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: romHEX14-Community-*.AppImage
+
+  release:
+    needs: [version, windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: "romHEX 14 Community ${{ needs.version.outputs.version }}"
+          body: |
+            ## romHEX 14 Community Edition — v${{ needs.version.outputs.version }}
+
+            ${{ github.event.inputs.changelog }}
+
+            ### Downloads
+
+            | Platform | File |
+            |---|---|
+            | Windows (64-bit) | `romHEX14-Community-${{ needs.version.outputs.version }}-windows-x64.zip` |
+            | macOS (Apple Silicon) | `romHEX14-Community-${{ needs.version.outputs.version }}-macos.dmg` |
+            | Linux (AppImage) | `romHEX14-Community-${{ needs.version.outputs.version }}-linux-x86_64.AppImage` |
+          files: |
+            artifacts/windows-build/*
+            artifacts/macos-build/*
+            artifacts/linux-build/*
+          draft: false
+          prerelease: true

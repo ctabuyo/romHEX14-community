@@ -1,0 +1,4 @@
+// Windows resource file — sets the .exe file icon shown in Explorer / taskbar.
+// Requires an ICO file. Convert icon.png to icon.ico (e.g. with GIMP or
+// an online converter) and place it next to this file, then rebuild.
+IDI_ICON1 ICON "icon.ico"

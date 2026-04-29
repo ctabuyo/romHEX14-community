@@ -1,0 +1,5246 @@
+[
+  {
+    "use": "Engine",
+    "manufacturer": "Heinzmann",
+    "group": "",
+    "name": ""
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Sagem",
+    "group": "",
+    "name": "2000"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Sagem",
+    "group": "",
+    "name": "2000PM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2102"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2103"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2204"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2205"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2211"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "24xx"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2510"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "2511"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "",
+    "name": "3.N5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Sagem",
+    "group": "",
+    "name": "3000"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3031"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3110"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3120"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3125"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3126"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3130"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3132"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3140"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3150"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "3155"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Transtron",
+    "group": "",
+    "name": "4Jxx"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "5WP4 Simos 33"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "5WP4 Simos 4S"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "6104"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Visteon",
+    "group": "",
+    "name": "7M51ADA"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM3",
+    "name": "A3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM4",
+    "name": "A4E4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM4",
+    "name": "A4E4I3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM4",
+    "name": "A4E4v2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM4",
+    "name": "A4E4v3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM4",
+    "name": "A4E4v3.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5E11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5E12"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5E2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5E2v2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5E2v2I1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5M8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM5",
+    "name": "A5X12I1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM6",
+    "name": "A6E10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM6",
+    "name": "A6E11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM6",
+    "name": "A6E2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "ADEM6",
+    "name": "A6E4"
+  },
+  {
+    "use": "ACM/MCM/EAS",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "ACM"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL1000"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL420"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL551"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL552"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL600"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL651"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL750"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL950"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AL",
+    "name": "AL951"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AQ",
+    "name": "AQ250"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "AQ",
+    "name": "AQ450"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "BMS",
+    "name": "BMS"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "BMS",
+    "name": "BMS-K"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "BMS",
+    "name": "BMS-MP"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "BMS",
+    "name": "BMS-X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "BMS",
+    "name": "BMS43"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "BMS",
+    "name": "BMS46"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "C",
+    "name": "C602"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "C",
+    "name": "C603"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "C",
+    "name": "C635"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "",
+    "name": "CDID"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM2150"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM2250"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM2350"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM2450"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM570"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM850"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "CM876"
+  },
+  {
+    "use": "ACM/MCM/EAS",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "CPC"
+  },
+  {
+    "use": "CPC",
+    "manufacturer": "",
+    "group": "",
+    "name": "CPC3"
+  },
+  {
+    "use": "CPC",
+    "manufacturer": "",
+    "group": "",
+    "name": "CPC_NG"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPEGD2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPEGD2.10.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPEGD2.20.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPEGD2.20.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPEGD2.20.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPEGD2.20.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "CPGDSH2.26.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "",
+    "name": "CRD2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "",
+    "name": "CRD2.X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "CRD3",
+    "name": "CRD3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "CRD3",
+    "name": "CRD3.E1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "CRD3",
+    "name": "CRD3.X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "CRD3",
+    "name": "CRD3P.C0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "CRD3",
+    "name": "CRD3P.D1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "Croft170"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "Croft200"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "Croft220"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "Croft222"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "Croft240"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "CroftT4E062"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "CroftT4E070"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "CroftT4E080"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "CroftT4E090"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "CroftT4E094"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "CroftT4E095"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM1",
+    "name": "DCM1.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM1",
+    "name": "DCM2.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3 MB"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM3",
+    "name": "DCM3.7AP"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM6",
+    "name": "DCM6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM6",
+    "name": "DCM6.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM6",
+    "name": "DCM6.2A"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM6",
+    "name": "DCM6.2C"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM6",
+    "name": "DCM6.2V"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM6",
+    "name": "DCM6.X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM7",
+    "name": "DCM7.1A"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "DCM7",
+    "name": "DCM7.24"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Visteon",
+    "group": "",
+    "name": "DCU102"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Visteon",
+    "group": "",
+    "name": "DCU106"
+  },
+  {
+    "use": "ACM/MCM/EAS",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "DD15"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "DDCR"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "",
+    "name": "DDCR"
+  },
+  {
+    "use": "ACM/MCM/EAS",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "DDEC6"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DL",
+    "name": "DL382"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DL",
+    "name": "DL382-7F"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DL",
+    "name": "DL501"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DL",
+    "name": "DL501 Gen1"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DL",
+    "name": "DL501 Gen2"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DL",
+    "name": "DL800"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Visteon",
+    "group": "",
+    "name": "DPU-442"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ200"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ200-MQB"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ200Dxx"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ250"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ250-6A/6F/6V"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ250-6A/6F/6V-MQB"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ250Cxx"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ250Exx"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ250Fxx"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ380"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ381"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ400E"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "DQ",
+    "name": "DQ500"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "",
+    "name": "DTI17"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E38"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E39"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E39A"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E78"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E80"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E83"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E87"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E92"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "E98"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Ford",
+    "group": "",
+    "name": "ECV6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C12"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15C9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15M"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15P+"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15V"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15VM+"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC15",
+    "name": "EDC15VMP"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16+"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C1-7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C33"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C34"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C35"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C36"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C37"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C39"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C41"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C7-7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16C9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP33"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP34"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP35"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP36"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP39"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16CP42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16U"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16U1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16U2.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16U31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16U34"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC16",
+    "name": "EDC16UC40"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C01"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C06"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C08"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C09"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C18"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C19"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C41"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C43"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C45"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C46"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C47"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C49"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C50"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C53"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C54"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C55"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C56"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C57"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C58"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C59"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C60"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C63"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C64"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C66"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C69"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C70"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C73"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C74"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C76"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C79"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C83"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17C84"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP01"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP02"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP04"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP05"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP06"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP07"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP09"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP14"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP15"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP16"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP17"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP18"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP19"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP21"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP22"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP24"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP27"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP37"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP44"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP45"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP46"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP47"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP48"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP49"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP54"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP55"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP57"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP58"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP65"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP66"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP68"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CP74"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CV41"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CV42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CV44"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CV52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CV54"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17CV56"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17U1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17U5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC17",
+    "name": "EDC17UC31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7C1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7C2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7C3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7C32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7C4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7U1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7U31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EDC7",
+    "name": "EDC7UC31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "SISU",
+    "group": "",
+    "name": "EEM2r03"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "SISU",
+    "group": "",
+    "name": "EEM2r04"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "SISU",
+    "group": "",
+    "name": "EEM2r05"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "SISU",
+    "group": "",
+    "name": "EEM2r07"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EGS",
+    "name": "EGS19"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EGS",
+    "name": "EGS51"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EGS",
+    "name": "EGS52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EGS",
+    "name": "EGS53"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "",
+    "name": "EML"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "EML",
+    "name": "EML"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "EMS"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "EMS EMD1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "EMS S6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "EMS S7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "EMS S8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "TRW",
+    "group": "",
+    "name": "EMS2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "EMS",
+    "name": "EMS2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "TRW",
+    "group": "",
+    "name": "EMS2.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "TRW",
+    "group": "",
+    "name": "EMS2.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "TRW",
+    "group": "",
+    "name": "EMS2.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "ETC5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "ETC6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "ETC7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "GMPT E-15"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "GPEDC2.20.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "",
+    "name": "HMC"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Johnson Valeo",
+    "group": "",
+    "name": "J34P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "J34P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L12"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L14 IV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L15"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L16"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L18"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L21"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L33"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L40"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "L9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M1.5.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M1.5.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M1.55"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.10.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.8.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.81"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M2.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M3.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M3.8.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M3.8.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M3.8.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M3.82"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M3.83"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M4.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M4.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.2.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.2.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.41"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.9.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M5.92"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M7.4.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M7.9.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M7.9.41"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M7.9.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M7.9.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "M7.9.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Kefico",
+    "group": "",
+    "name": "M798"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "MA2.4"
+  },
+  {
+    "use": "ACM/MCM/EAS",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "MCM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CE100"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CE101"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CE101"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CP001"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CP002"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CP004"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CP014"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CP032"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS001"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS003"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS004"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS005"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS006"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS008"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MD1",
+    "name": "MD1CS069"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME1.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME1.5.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.1.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.3.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.4.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.5.20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.5.22"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.5.24"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.5.2X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.5.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.7.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.8.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.8.31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.8.32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.8.33"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.8.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.8.XX"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.51"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.61"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.64"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "ME17.9.74"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME2.7.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME2.7.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME2.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME2.8.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "ME5.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.01"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.1.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.2.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.3.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.3.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.3H4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.4.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.4.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.4.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.4.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.4.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.5.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.5.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.5.20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.5.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.5.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.6.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.6.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.6.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.7.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.8.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.8.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.8.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.8.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.71"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "ME7.9.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.0C"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "ME9.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.0.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.0.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.21"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.27"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.61"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.62"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.1.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.2.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.2.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.3.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.3.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.3.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.3.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.3.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.3.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.4.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.4.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.21"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.24"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.25"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.26"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.27"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.5.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.6.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.3.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.7.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.3.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.31"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.8.X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.63"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MED17.9.X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "MED7.1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "MED7.6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)7",
+    "name": "MED7.6.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9.1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9.1.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9.5.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9.6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(D)9",
+    "name": "MED9.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DC)17",
+    "name": "MEDC17.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DC)17",
+    "name": "MEDC17.9.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEDG17.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEDG17.9.11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEDG17.9.12"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEDG17.9.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEDG17.9.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "MEMS"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "MEMS3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEV17.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEV17.2.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEV17.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEV17.4.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEV17.4.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.G"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.H"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.2.P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.26"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.4.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "ME(DV)17",
+    "name": "MEVD17.4.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CP00"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CP002"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CP007"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS001"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS002"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS003"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS008"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS011"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS015"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS016"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS017"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS019"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS024"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS028"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS042"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS047"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS111"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS163"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MG1",
+    "name": "MG1CS201"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "M(E)1-5",
+    "name": "MG7.9.8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJ",
+    "name": "MJ6F3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJ",
+    "name": "MJ8DF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJ",
+    "name": "MJ8F3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJ",
+    "name": "MJ8F3H"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJ",
+    "name": "MJ9DF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD602"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD602.03D"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD602.04"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD602.M1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD603.S3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD6F3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD6JF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD8DF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD8DS.P1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD8DS2.S2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MJD",
+    "name": "MJD9DF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM10",
+    "name": "MM10JA"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MMxx",
+    "name": "MM1AP"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MMxx",
+    "name": "MM48.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MMxx",
+    "name": "MM48P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MMxx",
+    "name": "MM48P2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4AF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4AV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4BV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4CF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4CM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4EF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4EV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4GM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4GV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4HV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4LV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4MV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4SF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4TV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM4",
+    "name": "MM4TV.GQ"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM59F"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5AF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5AM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5DM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5FH"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5NF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5NR"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5SF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM5",
+    "name": "MM5SM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM6",
+    "name": "MM6JF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM6",
+    "name": "MM6KP"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM6",
+    "name": "MM6KPB"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM6",
+    "name": "MM6LP"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM6",
+    "name": "MM6LPA"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM7",
+    "name": "MM7GF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM7",
+    "name": "MM7GV"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM7",
+    "name": "MM7GVE"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM7",
+    "name": "MM7SM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM8",
+    "name": "MM8GMF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM8",
+    "name": "MM8GMK"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM8",
+    "name": "MM8GML"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM8",
+    "name": "MM8GSF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM8",
+    "name": "MM8GSW"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM9",
+    "name": "MM9DF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM9",
+    "name": "MM9GF"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Marelli",
+    "group": "MM9",
+    "name": "MM9TDE"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MP",
+    "name": "MP3.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MP",
+    "name": "MP5.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MP",
+    "name": "MP7.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MP",
+    "name": "MP7.2"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "MQ",
+    "name": "MQ100"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MS",
+    "name": "MS Racing Ecu 6.xx"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS",
+    "name": "MS41.0"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS",
+    "name": "MS41.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS",
+    "name": "MS42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS",
+    "name": "MS43"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS",
+    "name": "MS45"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MS",
+    "name": "MS5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MS",
+    "name": "MS6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MS",
+    "name": "MS6.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MS",
+    "name": "MS6.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "MS",
+    "name": "MS6.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSD80"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSD81"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSD85"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSD87"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSS50"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSS52"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSS54"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSS60"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSS65"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSS70"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSV70"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSV80"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSV85"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "MS(SV)",
+    "name": "MSV90"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "MTxx",
+    "name": "MT20U"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "MTxx",
+    "name": "MT34"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "MT35"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "MT35E"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "MTxx",
+    "name": "MT38"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "MTxx",
+    "name": "MT80"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "MTxx",
+    "name": "MT86"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delphi",
+    "group": "MTxx",
+    "name": "MT92"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "MTC4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "MTC5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "MTC6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "Multec"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Delco",
+    "group": "",
+    "name": "Multec S (F)"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "NCG3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "NCG4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "NCG4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "NCG5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "NGC3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "NGC4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "NGC4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Chrysler",
+    "group": "",
+    "name": "NGC5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "NGC5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Motorola/Cummins",
+    "group": "",
+    "name": "NGC5 HWII"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "",
+    "name": "PCR2.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Caterpillar",
+    "group": "",
+    "name": "PPCCMFPP300"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "PPD",
+    "name": "PPD1.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "PPD",
+    "name": "PPD1.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "PPD",
+    "name": "PPD1.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "PPD",
+    "name": "PPD1.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Bosch",
+    "group": "",
+    "name": "PSG16"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Sagem",
+    "group": "",
+    "name": "S2000RPM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI10.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI10.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI10.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI21"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI21.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI21.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI21.X"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI6.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI7.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SDI",
+    "name": "SDI9"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID201"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID202"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID203"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID204"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID206"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID207"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID208"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID209"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID20x"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID211"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID301"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID303"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID304"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID305"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID306"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID307"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID309"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID310"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID801"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID801A"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID802"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID803"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID803A"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID804"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID805"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID806"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID807"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID807EVO"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID881"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID884"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SID",
+    "name": "SID902"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM201"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM210"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM24"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM266"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM271"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM271DE"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM271DE20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM271KE"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM271KE20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM28"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM29"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM2K-140"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM2K-141"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM2K-240"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM2K-341"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM4LE"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM4LKE"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM90E"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM90P"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIM",
+    "name": "SIM90T"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos10.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos10.13"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos10.14"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos10.20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos10.22"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos11.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos12"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos12.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos12.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos15"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos16"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos18"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos18.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos18.10"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos18.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos18.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos18.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos19.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos19.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos20.20"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos22"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos28"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos29"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos3PC"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos6.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos7.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos8.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos8.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos8.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos8.4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos8.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos9.2"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMOS",
+    "name": "Simos9.3"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec70"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec71"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec71.5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec71.6"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec75"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec75.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec76"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec81"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec81.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIMTEC",
+    "name": "Simtec90"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIRIUS",
+    "name": "Sirius32"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Siemens/Continental",
+    "group": "SIRIUS",
+    "name": "Sirius34"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "SQ",
+    "name": "SQ100"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "T4"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "T4E"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "EFI",
+    "group": "",
+    "name": "T6E"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Saab",
+    "group": "",
+    "name": "Trionic AFM"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Saab",
+    "group": "",
+    "name": "Trionic T5"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Saab",
+    "group": "",
+    "name": "Trionic T7"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Saab",
+    "group": "",
+    "name": "Trionic T8"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Phoenix",
+    "group": "",
+    "name": "UIC2"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "V",
+    "name": "V30"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "V40"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "V42"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "V43"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "V46.11"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "V50"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "VD46"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "VD46.1"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Valeo",
+    "group": "",
+    "name": "VD56.1"
+  },
+  {
+    "use": "CPC",
+    "manufacturer": "",
+    "group": "",
+    "name": "VGS4_NAG2"
+  },
+  {
+    "use": "CPC",
+    "manufacturer": "",
+    "group": "",
+    "name": "VGS_NAG2"
+  },
+  {
+    "use": "CPC",
+    "manufacturer": "",
+    "group": "",
+    "name": "VGS_NAG3"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "VL",
+    "name": "VL300"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "VL",
+    "name": "VL380"
+  },
+  {
+    "use": "TCU",
+    "manufacturer": "",
+    "group": "VL",
+    "name": "VL381"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "ZGS 001"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "ZGS 002"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "ZGS 003"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "ZGS 004"
+  },
+  {
+    "use": "Engine",
+    "manufacturer": "Temic",
+    "group": "",
+    "name": "ZGS 007"
+  }
+]

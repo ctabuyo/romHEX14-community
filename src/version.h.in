@@ -1,0 +1,10 @@
+#pragma once
+
+// Generated from src/version.h.in by CMake. Do not edit.
+// Single source of truth: /VERSION (top-level file).
+
+#define RX14_VERSION_STRING  "@RX14_VERSION_STRING@"
+#define RX14_VERSION_NUMERIC "@RX14_VERSION_NUMERIC@"
+#define RX14_VERSION_MAJOR   @RX14_VERSION_MAJOR@
+#define RX14_VERSION_MINOR   @RX14_VERSION_MINOR@
+#define RX14_VERSION_PATCH   @RX14_VERSION_PATCH@

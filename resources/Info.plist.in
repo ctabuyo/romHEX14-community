@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>romHEX 14</string>
+    <key>CFBundleDisplayName</key>
+    <string>romHEX 14</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.ct14garage.romhex14</string>
+    <key>CFBundleVersion</key>
+    <string>@VERSION@</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@VERSION@</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>rx14</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.icns</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>RX14 Project</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.ct14garage.rx14proj</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>rx14proj</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>icon.icns</string>
+        </dict>
+    </array>
+</dict>
+</plist>

@@ -1,0 +1,886 @@
+/*
+ * This file is part of romHEX14.
+ * Copyright (C) 2026 Cristian Tabuyo <contact@romhex14.com>
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include "hexwidget.h"
+#include "appconfig.h"
+#include <QPainter>
+#include <QMouseEvent>
+#include <QKeyEvent>
+#include <QScrollBar>
+#include <QFontMetrics>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QApplication>
+#include <QClipboard>
+#include <QInputDialog>
+#include <QRegularExpression>
+#include <cmath>
+
+static const int kBarW = 48;
+
+HexWidget::HexWidget(QWidget *parent)
+    : QAbstractScrollArea(parent)
+{
+    m_monoFont = QFont("Consolas", 10);
+    m_monoFont.setStyleHint(QFont::Monospace);
+    setFont(m_monoFont);
+
+    QFontMetrics fm(m_monoFont);
+    m_byteWidth = fm.horizontalAdvance("FF") + 6;
+    m_asciiCharWidth = fm.horizontalAdvance('W');
+    m_offsetWidth = fm.horizontalAdvance("0x00000000") + 20;
+
+    viewport()->setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::StrongFocus);
+
+    // Vertical overview minimap on the right edge
+    m_overviewBar = new HexOverviewBar(this);
+    // Reserve space on the right for the overview bar
+    setViewportMargins(0, 0, kBarW, 0);
+
+    connect(m_overviewBar, &HexOverviewBar::scrollRequested, this, [this](int row) {
+        verticalScrollBar()->setValue(qBound(0, row, verticalScrollBar()->maximum()));
+    });
+
+    connect(verticalScrollBar(), &QScrollBar::valueChanged, m_overviewBar,
+            QOverload<>::of(&QWidget::update));
+
+    connect(&AppConfig::instance(), &AppConfig::colorsChanged,
+            viewport(), QOverload<>::of(&QWidget::update));
+}
+
+void HexWidget::loadData(const QByteArray &data, uint32_t baseAddress)
+{
+    m_data         = data;
+    m_originalData = data;
+    m_baseAddress  = baseAddress;
+    m_modifications.clear();
+    m_selectedOffset = -1;
+    m_editing = false;
+    m_selectionStart = -1;
+    m_selectionEnd = -1;
+    m_undoStack.clear();
+    m_undoIndex = -1;
+    m_overviewBar->rebuild();
+    updateScrollBar();
+    viewport()->update();
+}
+
+void HexWidget::setBaseAddress(uint32_t baseAddress)
+{
+    m_baseAddress = baseAddress;
+    viewport()->update();
+}
+
+void HexWidget::setFontSize(int pt)
+{
+    pt = qBound(7, pt, 24);
+    m_monoFont.setPointSize(pt);
+    setFont(m_monoFont);
+
+    QFontMetrics fm(m_monoFont);
+    const int hexChars = 2 * m_groupSize;
+    m_byteWidth     = fm.horizontalAdvance(QString(hexChars, 'F')) + 8;
+    m_asciiCharWidth = fm.horizontalAdvance('W');
+    m_offsetWidth   = fm.horizontalAdvance("0x00000000") + 20;
+    m_rowHeight     = fm.height() + 6;
+    m_headerHeight  = m_rowHeight + 2;
+
+    updateScrollBar();
+    viewport()->update();
+}
+
+void HexWidget::setDisplayParams(int cellSize, ByteOrder bo, int displayFmt, bool isSigned)
+{
+    m_groupSize  = qBound(1, cellSize, 4);
+    m_byteOrder  = bo;
+    m_displayFmt = displayFmt;
+    m_isSigned   = isSigned;
+
+    // Recalculate cell width: each group shows 2*groupSize hex digits
+    QFontMetrics fm(m_monoFont);
+    const int hexChars = 2 * m_groupSize;
+    m_byteWidth = fm.horizontalAdvance(QString(hexChars, 'F')) + 8;
+
+    updateScrollBar();
+    viewport()->update();
+}
+
+QByteArray HexWidget::getData() const { return m_data; }
+QByteArray HexWidget::getOriginalData() const { return m_originalData; }
+QByteArray HexWidget::exportBinary() const { return m_data; }
+
+void HexWidget::goToAddress(uint32_t offset)
+{
+    if (m_data.isEmpty() || (int)offset >= m_data.size()) return;
+    m_selectedOffset = offset;
+    clearSelection();
+    int row = offset / m_bytesPerRow;
+    verticalScrollBar()->setValue(row);
+    viewport()->update();
+}
+
+void HexWidget::setMapRegions(const QVector<MapRegion> &regions)
+{
+    m_mapRegions = regions;
+    m_overviewBar->rebuild();
+    viewport()->update();
+}
+
+void HexWidget::setComparisonData(const QByteArray &data)
+{
+    m_comparisonData = data;
+    viewport()->update();
+}
+
+void HexWidget::clearSelection()
+{
+    m_selectionStart = -1;
+    m_selectionEnd = -1;
+}
+
+void HexWidget::pushUndo(int offset, const QByteArray &before, const QByteArray &after)
+{
+    // Discard any redo entries beyond current position
+    if (m_undoIndex + 1 < m_undoStack.size())
+        m_undoStack.resize(m_undoIndex + 1);
+
+    m_undoStack.append({offset, before, after});
+
+    // Enforce stack limit
+    if (m_undoStack.size() > kMaxUndo) {
+        m_undoStack.removeFirst();
+    }
+    m_undoIndex = m_undoStack.size() - 1;
+}
+
+void HexWidget::updateModifications(int offset, int length)
+{
+    for (int i = offset; i < offset + length && i < m_data.size(); ++i) {
+        if (i < m_originalData.size() && (uint8_t)m_data[i] != (uint8_t)m_originalData[i])
+            m_modifications.insert(i);
+        else
+            m_modifications.remove(i);
+    }
+    emit dataModified(m_modifications.size());
+    emit bytesModified(offset, length);
+}
+
+void HexWidget::updateScrollBar()
+{
+    if (m_data.isEmpty()) return;
+    int totalRows = (m_data.size() + m_bytesPerRow - 1) / m_bytesPerRow;
+    int visibleRows = (viewport()->height() - m_headerHeight) / m_rowHeight;
+    verticalScrollBar()->setRange(0, qMax(0, totalRows - visibleRows));
+    verticalScrollBar()->setPageStep(visibleRows);
+    verticalScrollBar()->setSingleStep(1);
+}
+
+void HexWidget::resizeEvent(QResizeEvent *event)
+{
+    QAbstractScrollArea::resizeEvent(event);
+
+    // Position the overview bar on the right side, full height
+    int barX = width() - kBarW - verticalScrollBar()->width();
+    m_overviewBar->setGeometry(barX, 0, kBarW, height());
+    m_overviewBar->rebuild();
+    m_overviewBar->show();
+
+    updateScrollBar();
+}
+
+int HexWidget::mapRegionForOffset(uint32_t offset) const
+{
+    for (int i = 0; i < m_mapRegions.size(); i++) {
+        const auto &r = m_mapRegions[i];
+        if (offset >= r.start && offset < r.start + (uint32_t)r.length)
+            return i;
+    }
+    return -1;
+}
+
+// Returns the rect for group index g (not byte index)
+QRect HexWidget::byteRect(int g, int y) const
+{
+    const int halfGroups = 8 / m_groupSize;   // separator after first half
+    int x = m_offsetWidth + g * m_byteWidth;
+    if (g >= halfGroups) x += m_separatorWidth;
+    return QRect(x, y, m_byteWidth, m_rowHeight);
+}
+
+void HexWidget::paintEvent(QPaintEvent *)
+{
+    QPainter p(viewport());
+    p.setFont(m_monoFont);
+
+    int w = viewport()->width();
+    int h = viewport()->height();
+
+    // Background
+    p.fillRect(0, 0, w, h, AppConfig::instance().colors.hexBg);
+
+    if (m_data.isEmpty()) {
+        // Welcome screen
+        p.setPen(QColor(58, 145, 208));
+        QFont bigFont = m_monoFont;
+        bigFont.setPointSize(48);
+        bigFont.setBold(true);
+        p.setFont(bigFont);
+        p.drawText(QRect(0, 0, w, h - 60), Qt::AlignCenter, "RX14");
+        p.setFont(m_monoFont);
+        p.setPen(QColor(107, 127, 163));
+        p.drawText(QRect(0, h/2, w, 40), Qt::AlignCenter, "ECU Calibration Suite — Open a ROM file to begin");
+        return;
+    }
+
+    int startRow = verticalScrollBar()->value();
+    int visibleRows = (h - m_headerHeight) / m_rowHeight + 2;
+
+    // Column header
+    p.fillRect(0, 0, w, m_headerHeight, AppConfig::instance().colors.hexHeaderBg);
+    QColor headerTextCol = AppConfig::instance().colors.hexHeaderText; headerTextCol.setAlpha(150);
+    p.setPen(headerTextCol);
+    QFont headerFont = m_monoFont;
+    headerFont.setPointSize(9);
+    p.setFont(headerFont);
+    p.drawText(QRect(0, 0, m_offsetWidth, m_headerHeight), Qt::AlignRight | Qt::AlignVCenter, "Offset  ");
+    const int groups = m_bytesPerRow / m_groupSize;
+    for (int g = 0; g < groups; g++) {
+        QRect r = byteRect(g, 0);
+        r.setHeight(m_headerHeight);
+        p.drawText(r, Qt::AlignCenter,
+                   QString("%1").arg(g * m_groupSize, 2, 16, QChar('0')).toUpper());
+    }
+    int asciiX = m_offsetWidth + groups * m_byteWidth + m_separatorWidth + 12;
+    const QString sidebarLabel = (m_sidebarMode == SidebarMode::Bars) ? "Bars" : "ASCII";
+    p.drawText(QRect(asciiX, 0, 100, m_headerHeight), Qt::AlignLeft | Qt::AlignVCenter, sidebarLabel);
+    p.setFont(m_monoFont);
+
+    // Border under header
+    QColor borderCol = AppConfig::instance().colors.hexHeaderText; borderCol.setAlpha(38);
+    p.setPen(borderCol);
+    p.drawLine(0, m_headerHeight, w, m_headerHeight);
+
+    // Data rows
+    for (int i = 0; i < visibleRows; i++) {
+        int row = startRow + i;
+        int y = m_headerHeight + i * m_rowHeight;
+        if (y > h) break;
+        renderRow(p, row, y);
+    }
+}
+
+void HexWidget::renderRow(QPainter &p, int row, int y)
+{
+    uint32_t offset = row * m_bytesPerRow;
+    if ((int)offset >= m_data.size()) return;
+
+    const uint8_t *raw = reinterpret_cast<const uint8_t*>(m_data.constData());
+
+    // Precompute selection range
+    const bool hasSel = hasSelection();
+    const int sStart = hasSel ? selStart() : -1;
+    const int sEnd   = hasSel ? selEnd()   : -1;
+
+    // Offset column
+    p.setPen(AppConfig::instance().colors.hexOffset);
+    QString addr = QString("0x%1").arg(m_baseAddress + offset, 8, 16, QChar('0')).toUpper();
+    p.drawText(QRect(0, y, m_offsetWidth, m_rowHeight), Qt::AlignRight | Qt::AlignVCenter, addr + "  ");
+
+    // Bytes + ASCII
+    QString asciiStr;
+    const int groups = m_bytesPerRow / m_groupSize;
+    int asciiX = m_offsetWidth + groups * m_byteWidth + m_separatorWidth + 12;
+
+    for (int g = 0; g < groups; g++) {
+        const int byteCol = g * m_groupSize;
+        uint32_t  baseIdx = offset + byteCol;
+        QRect br = byteRect(g, y);
+
+        if ((int)baseIdx >= m_data.size()) {
+            for (int b = 0; b < m_groupSize; b++) asciiStr += ' ';
+            continue;
+        }
+
+        // Assemble multi-byte value respecting byte order
+        const int bytesAvail = qMin(m_groupSize, (int)(m_data.size() - (int)baseIdx));
+        uint32_t groupVal = 0;
+        if (m_byteOrder == ByteOrder::BigEndian) {
+            for (int b = 0; b < bytesAvail; b++)
+                groupVal = (groupVal << 8) | raw[baseIdx + b];
+        } else {
+            for (int b = bytesAvail - 1; b >= 0; b--)
+                groupVal = (groupVal << 8) | raw[baseIdx + b];
+        }
+
+        // Format display string
+        QString cellStr;
+        if (m_displayFmt == 1) { // decimal
+            if (m_isSigned) {
+                int32_t sv = (m_groupSize == 1) ? (int8_t)groupVal :
+                             (m_groupSize == 2) ? (int16_t)groupVal : (int32_t)groupVal;
+                cellStr = QString::number(sv);
+            } else {
+                cellStr = QString::number(groupVal);
+            }
+        } else if (m_displayFmt == 2) { // binary
+            cellStr = QString("%1").arg(groupVal, 8 * m_groupSize, 2, QChar('0'));
+        } else { // hex
+            cellStr = QString("%1").arg(groupVal, 2 * m_groupSize, 16, QChar('0')).toUpper();
+        }
+
+        // Check if this group is selected, in range selection, or modified
+        bool isSelected = false, isModified = false, isInSelection = false;
+        for (int b = 0; b < bytesAvail; b++) {
+            uint32_t idx = baseIdx + b;
+            if ((int32_t)idx == m_selectedOffset) isSelected = true;
+            if (m_modifications.contains(idx)) isModified = true;
+            if (hasSel && (int)idx >= sStart && (int)idx <= sEnd) isInSelection = true;
+        }
+
+        // Background: map region
+        int mapIdx = mapRegionForOffset(baseIdx);
+        if (mapIdx >= 0) {
+            QColor mc = AppConfig::instance().colors.mapBand[mapIdx % 5]; mc.setAlpha(30);
+            p.fillRect(br, mc);
+        }
+
+        // Check if byte differs from comparison data
+        bool isDiff = (int)baseIdx < m_comparisonData.size()
+                      && m_data[baseIdx] != m_comparisonData[baseIdx];
+
+        // Background: range selection highlight
+        if (isInSelection && !isSelected) {
+            p.fillRect(br, QColor(31, 111, 235, 64));
+            p.setPen(AppConfig::instance().colors.hexText);
+        }
+
+        // Background: selected / editing (cursor takes priority)
+        if (isSelected) {
+            p.fillRect(br, AppConfig::instance().colors.hexSelected);
+            p.setPen(Qt::white);
+            if (m_editing) p.drawRect(br.adjusted(0, 0, -1, -1));
+        } else if (isInSelection) {
+            // pen already set above
+        } else if (isDiff) {
+            p.fillRect(br, QColor(60, 35, 10, 160));  // dark amber background
+            p.setPen(QColor(255, 160, 50));            // amber text
+        } else if (isModified) {
+            p.setPen(AppConfig::instance().colors.hexModified);
+        } else {
+            p.setPen(AppConfig::instance().colors.hexText);
+        }
+
+        p.drawText(br, Qt::AlignCenter, cellStr);
+
+        // Collect ASCII chars for sidebar
+        for (int b = 0; b < bytesAvail; b++) {
+            uint8_t val = raw[baseIdx + b];
+            asciiStr += (val >= 32 && val <= 126) ? (char)val : '.';
+        }
+    }
+
+    // ── Sidebar: ASCII text or bar chart ─────────────────────────────────
+    const int sidebarW = m_asciiCharWidth * m_bytesPerRow;
+
+    if (m_sidebarMode == SidebarMode::Bars) {
+        // Each byte -> a vertical bar whose height is proportional to its value (0-255)
+        const int barW    = qMax(1, sidebarW / m_bytesPerRow);
+        const int padV    = 2;                          // top/bottom padding
+        const int areaH   = m_rowHeight - padV * 2;    // available bar height
+
+        for (int i = 0; i < m_bytesPerRow; i++) {
+            uint32_t idx = offset + i;
+            if ((int)idx >= m_data.size()) break;
+
+            uint8_t val = raw[idx];
+            int barH = (val * areaH + 127) / 255;      // round to nearest pixel
+            int bx   = asciiX + i * barW;
+            int by   = y + padV + (areaH - barH);       // bars grow upward from bottom
+
+            // Choose fill colour
+            QColor fill = AppConfig::instance().colors.hexBarDefault;
+
+            int mapIdx = mapRegionForOffset(idx);
+            if (mapIdx >= 0)
+                fill = AppConfig::instance().colors.mapBand[mapIdx % 5];
+
+            if (m_modifications.contains(idx))
+                fill = AppConfig::instance().colors.hexModified;
+
+            // Selection highlight in bar mode
+            if (hasSel && (int)idx >= sStart && (int)idx <= sEnd)
+                fill = QColor(31, 111, 235, 180);
+
+            if ((int32_t)idx == m_selectedOffset)
+                fill = QColor(88, 166, 255);             // blue for selected
+
+            if (barH > 0)
+                p.fillRect(bx, by, barW - 1, barH, fill);
+        }
+    } else {
+        // ASCII text column - draw char by char for selection highlighting
+        for (int i = 0; i < m_bytesPerRow; i++) {
+            uint32_t idx = offset + i;
+            if ((int)idx >= m_data.size()) break;
+
+            int cx = asciiX + i * m_asciiCharWidth;
+            QRect charRect(cx, y, m_asciiCharWidth, m_rowHeight);
+
+            // Selection highlight in ASCII column
+            if (hasSel && (int)idx >= sStart && (int)idx <= sEnd) {
+                p.fillRect(charRect, QColor(31, 111, 235, 64));
+            }
+            if ((int32_t)idx == m_selectedOffset) {
+                p.fillRect(charRect, QColor(31, 111, 235, 100));
+            }
+
+            p.setPen(AppConfig::instance().colors.hexOffset);
+            QChar ch = (i < asciiStr.size()) ? asciiStr[i] : QChar('.');
+            p.drawText(charRect, Qt::AlignLeft | Qt::AlignVCenter, QString(ch));
+        }
+    }
+}
+
+void HexWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (m_data.isEmpty()) return;
+
+    int x = event->pos().x();
+    int y = event->pos().y();
+
+    if (y < m_headerHeight) return;
+
+    int row = verticalScrollBar()->value() + (y - m_headerHeight) / m_rowHeight;
+    int screenY = m_headerHeight + ((y - m_headerHeight) / m_rowHeight) * m_rowHeight;
+    const int groups = m_bytesPerRow / m_groupSize;
+
+    // Check if click is in the bytes area
+    for (int g = 0; g < groups; g++) {
+        QRect br = byteRect(g, screenY);
+        if (x >= br.left() && x < br.right()) {
+            uint32_t clickOffset = row * m_bytesPerRow + g * m_groupSize;
+            if ((int)clickOffset < m_data.size()) {
+                if (event->modifiers() & Qt::ShiftModifier) {
+                    // Shift+Click: extend selection
+                    if (!hasSelection()) {
+                        m_selectionStart = m_selectedOffset;
+                    }
+                    m_selectionEnd = clickOffset;
+                    m_selectedOffset = clickOffset;
+                } else {
+                    // Normal click: clear selection, set cursor
+                    clearSelection();
+                    m_selectedOffset = clickOffset;
+                }
+                m_editing = false;
+                m_editNibble = 0;
+                emit offsetSelected(clickOffset, (uint8_t)m_data[clickOffset]);
+                viewport()->update();
+            }
+            return;
+        }
+    }
+}
+
+void HexWidget::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    mousePressEvent(event);
+    if (m_selectedOffset >= 0) {
+        m_editing = true;
+        m_editNibble = 0;
+        m_editByteBefore = (uint8_t)m_data[m_selectedOffset];
+        viewport()->update();
+    }
+}
+
+void HexWidget::keyPressEvent(QKeyEvent *event)
+{
+    if (m_data.isEmpty() || m_selectedOffset < 0) {
+        QAbstractScrollArea::keyPressEvent(event);
+        return;
+    }
+
+    uint8_t *raw = reinterpret_cast<uint8_t*>(m_data.data());
+
+    // ── Ctrl+A: select all ───────────────────────────────────────────────
+    if (event->matches(QKeySequence::SelectAll)) {
+        m_selectionStart = 0;
+        m_selectionEnd = m_data.size() - 1;
+        viewport()->update();
+        return;
+    }
+
+    // ── Ctrl+C: copy selected bytes as hex ───────────────────────────────
+    if (event->matches(QKeySequence::Copy) && hasSelection()) {
+        QString hex;
+        for (int i = selStart(); i <= selEnd(); ++i)
+            hex += QString("%1 ").arg((uint8_t)m_data[i], 2, 16, QChar('0')).toUpper();
+        QApplication::clipboard()->setText(hex.trimmed());
+        return;
+    }
+
+    // ── Ctrl+V: paste hex bytes ──────────────────────────────────────────
+    if (event->matches(QKeySequence::Paste)) {
+        QString text = QApplication::clipboard()->text().trimmed();
+        QStringList tokens = text.split(QRegularExpression("\\s+"));
+        int off = m_selectedOffset;
+        int count = 0;
+        for (const QString &t : tokens) {
+            if (off + count >= m_data.size()) break;
+            bool ok;
+            uint val = t.toUInt(&ok, 16);
+            if (!ok || val > 255) continue;
+            ++count;
+        }
+        if (count == 0) return;
+
+        // Snapshot before for undo
+        QByteArray before = m_data.mid(off, count);
+
+        // Apply paste
+        int idx = off;
+        for (const QString &t : tokens) {
+            if (idx >= off + count) break;
+            bool ok;
+            uint val = t.toUInt(&ok, 16);
+            if (!ok || val > 255) continue;
+            m_data[idx] = (char)val;
+            ++idx;
+        }
+
+        QByteArray after = m_data.mid(off, count);
+        pushUndo(off, before, after);
+        updateModifications(off, count);
+        viewport()->update();
+        return;
+    }
+
+    // ── Ctrl+Z: undo ────────────────────────────────────────────────────
+    if (event->matches(QKeySequence::Undo)) {
+        if (m_undoIndex >= 0 && m_undoIndex < m_undoStack.size()) {
+            const HexUndoEntry &entry = m_undoStack[m_undoIndex];
+            m_data.replace(entry.offset, entry.before.size(), entry.before);
+            updateModifications(entry.offset, entry.before.size());
+            m_selectedOffset = entry.offset;
+            m_undoIndex--;
+            viewport()->update();
+        }
+        return;
+    }
+
+    // ── Ctrl+Y / Ctrl+Shift+Z: redo ─────────────────────────────────────
+    if (event->matches(QKeySequence::Redo)) {
+        if (m_undoIndex + 1 < m_undoStack.size()) {
+            m_undoIndex++;
+            const HexUndoEntry &entry = m_undoStack[m_undoIndex];
+            m_data.replace(entry.offset, entry.after.size(), entry.after);
+            updateModifications(entry.offset, entry.after.size());
+            m_selectedOffset = entry.offset;
+            viewport()->update();
+        }
+        return;
+    }
+
+    // ── Ctrl+G: go to address ────────────────────────────────────────────
+    if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_G) {
+        bool ok;
+        QString s = QInputDialog::getText(this, tr("Go to Address"),
+            tr("Address (hex):"), QLineEdit::Normal, {}, &ok);
+        if (ok && !s.isEmpty()) {
+            if (s.startsWith("0x", Qt::CaseInsensitive)) s = s.mid(2);
+            uint32_t addr = s.toUInt(nullptr, 16);
+            goToAddress(addr);
+        }
+        return;
+    }
+
+    // ── Delete key: zero selected bytes ──────────────────────────────────
+    if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) {
+        if (hasSelection()) {
+            int s = selStart(), e = selEnd();
+            int len = e - s + 1;
+            QByteArray before = m_data.mid(s, len);
+            for (int i = s; i <= e; ++i)
+                m_data[i] = 0x00;
+            QByteArray after = m_data.mid(s, len);
+            pushUndo(s, before, after);
+            updateModifications(s, len);
+            clearSelection();
+        } else {
+            QByteArray before = m_data.mid(m_selectedOffset, 1);
+            m_data[m_selectedOffset] = 0x00;
+            QByteArray after = m_data.mid(m_selectedOffset, 1);
+            pushUndo(m_selectedOffset, before, after);
+            updateModifications(m_selectedOffset, 1);
+        }
+        viewport()->update();
+        return;
+    }
+
+    // ── Nibble editing ───────────────────────────────────────────────────
+    if (m_editing) {
+        QString key = event->text().toLower();
+        if (key.size() == 1 && QString("0123456789abcdef").contains(key[0])) {
+            int nibbleVal = key[0].digitValue();
+            if (nibbleVal < 0) nibbleVal = key[0].unicode() - 'a' + 10;
+
+            uint8_t current = raw[m_selectedOffset];
+
+            if (m_editNibble == 0) {
+                raw[m_selectedOffset] = (nibbleVal << 4) | (current & 0x0F);
+                m_editNibble = 1;
+            } else {
+                raw[m_selectedOffset] = (raw[m_selectedOffset] & 0xF0) | nibbleVal;
+                m_editNibble = 0;
+                m_editing = false;
+
+                QByteArray before(1, (char)m_editByteBefore);
+                QByteArray after(1, (char)raw[m_selectedOffset]);
+                pushUndo(m_selectedOffset, before, after);
+                updateModifications(m_selectedOffset, 1);
+
+                // Move to next byte
+                if (m_selectedOffset < m_data.size() - 1) {
+                    m_selectedOffset++;
+                }
+            }
+            viewport()->update();
+            return;
+        }
+
+        if (event->key() == Qt::Key_Escape) {
+            m_editing = false;
+            m_editNibble = 0;
+            viewport()->update();
+            return;
+        }
+    }
+
+    // ── Navigation (with optional Shift for selection) ───────────────────
+    int delta = 0;
+    switch (event->key()) {
+    case Qt::Key_Right:  delta = 1; break;
+    case Qt::Key_Left:   delta = -1; break;
+    case Qt::Key_Down:   delta = m_bytesPerRow; break;
+    case Qt::Key_Up:     delta = -m_bytesPerRow; break;
+    case Qt::Key_PageDown: delta = m_bytesPerRow * 16; break;
+    case Qt::Key_PageUp:   delta = -m_bytesPerRow * 16; break;
+    case Qt::Key_Home:
+        if (event->modifiers() & Qt::ShiftModifier) {
+            if (!hasSelection()) m_selectionStart = m_selectedOffset;
+            m_selectionEnd = 0;
+        } else {
+            clearSelection();
+        }
+        m_selectedOffset = 0;
+        viewport()->update();
+        return;
+    case Qt::Key_End:
+        if (event->modifiers() & Qt::ShiftModifier) {
+            if (!hasSelection()) m_selectionStart = m_selectedOffset;
+            m_selectionEnd = m_data.size() - 1;
+        } else {
+            clearSelection();
+        }
+        m_selectedOffset = m_data.size() - 1;
+        viewport()->update();
+        return;
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+        m_editing = true;
+        m_editNibble = 0;
+        m_editByteBefore = (uint8_t)m_data[m_selectedOffset];
+        viewport()->update();
+        return;
+    default:
+        QAbstractScrollArea::keyPressEvent(event);
+        return;
+    }
+
+    int32_t newOffset = m_selectedOffset + delta;
+    if (newOffset >= 0 && newOffset < m_data.size()) {
+        if (event->modifiers() & Qt::ShiftModifier) {
+            // Shift+Arrow: extend selection
+            if (!hasSelection()) {
+                m_selectionStart = m_selectedOffset;
+            }
+            m_selectionEnd = newOffset;
+        } else {
+            // Normal arrow: clear selection
+            clearSelection();
+        }
+
+        m_selectedOffset = newOffset;
+
+        // Ensure visible
+        int row = m_selectedOffset / m_bytesPerRow;
+        int firstVisible = verticalScrollBar()->value();
+        int visibleRows = (viewport()->height() - m_headerHeight) / m_rowHeight;
+        if (row < firstVisible) verticalScrollBar()->setValue(row);
+        else if (row >= firstVisible + visibleRows) verticalScrollBar()->setValue(row - visibleRows + 1);
+
+        emit offsetSelected(m_selectedOffset, raw[m_selectedOffset]);
+        viewport()->update();
+    }
+}
+
+void HexWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+
+    QAction *actAscii = menu.addAction(tr("ASCII view"));
+    QAction *actBars  = menu.addAction(tr("Bar view"));
+
+    actAscii->setCheckable(true);
+    actBars ->setCheckable(true);
+    actAscii->setChecked(m_sidebarMode == SidebarMode::ASCII);
+    actBars ->setChecked(m_sidebarMode == SidebarMode::Bars);
+
+    QAction *chosen = menu.exec(event->globalPos());
+    if      (chosen == actAscii) m_sidebarMode = SidebarMode::ASCII;
+    else if (chosen == actBars)  m_sidebarMode = SidebarMode::Bars;
+    else return;
+
+    viewport()->update();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  HexOverviewBar — vertical minimap next to the scrollbar
+// ═══════════════════════════════════════════════════════════════════════════════
+
+HexOverviewBar::HexOverviewBar(HexWidget *parent)
+    : QWidget(parent), m_hex(parent)
+{
+    setFixedWidth(kBarW);
+    setMouseTracking(true);
+    setCursor(Qt::PointingHandCursor);
+}
+
+void HexOverviewBar::rebuild()
+{
+    const QByteArray &data = m_hex->romData();
+    int h = qMax(height(), 100);
+    m_cache.resize(h);
+
+    if (data.isEmpty()) { m_cache.fill(0); update(); return; }
+
+    const int dataSize = data.size();
+    const uint8_t *raw = reinterpret_cast<const uint8_t *>(data.constData());
+
+    for (int py = 0; py < h; py++) {
+        int byteStart = (int)((double)py / h * dataSize);
+        int byteEnd   = (int)((double)(py + 1) / h * dataSize);
+        byteEnd = qMin(byteEnd, dataSize);
+        if (byteStart >= byteEnd) { m_cache[py] = 0; continue; }
+
+        uint8_t mx = 0;
+        int step = qMax(1, (byteEnd - byteStart) / 32);
+        for (int i = byteStart; i < byteEnd; i += step)
+            if (raw[i] > mx) mx = raw[i];
+        m_cache[py] = mx / 255.0f;
+    }
+    update();
+}
+
+int HexOverviewBar::rowAtY(int y) const
+{
+    const QByteArray &data = m_hex->romData();
+    if (data.isEmpty()) return 0;
+    int totalRows = (data.size() + m_hex->bytesPerRow() - 1) / m_hex->bytesPerRow();
+    double pct = (double)y / height();
+    int visibleRows = (m_hex->viewport()->height() - m_hex->headerHeight()) / m_hex->rowHeight();
+    return (int)(pct * totalRows) - visibleRows / 2;
+}
+
+void HexOverviewBar::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    int w = width();
+    int h = height();
+
+    // Background
+    p.fillRect(0, 0, w, h, QColor(0x0d, 0x11, 0x17));
+
+    // Left border
+    p.setPen(QColor(0x21, 0x26, 0x2d));
+    p.drawLine(0, 0, 0, h);
+
+    const QByteArray &data = m_hex->romData();
+    if (data.isEmpty() || m_cache.isEmpty()) return;
+
+    // Intensity bars (horizontal, one per pixel row)
+    int ch = qMin(h, m_cache.size());
+    for (int py = 0; py < ch; py++) {
+        float pct = m_cache[py];
+        if (pct <= 0.01f) continue;
+        int bw = (int)(pct * (w - 4));
+        if (bw <= 0) continue;
+
+        int r, g, b;
+        if (pct < 0.5f) {
+            r = (int)(25 + pct * 2 * 30);
+            g = (int)(50 + pct * 2 * 130);
+            b = (int)(100 + pct * 2 * 100);
+        } else {
+            r = (int)(55 + (pct - 0.5f) * 2 * 200);
+            g = (int)(180 - (pct - 0.5f) * 2 * 40);
+            b = (int)(200 - (pct - 0.5f) * 2 * 160);
+        }
+        p.fillRect(2, py, bw, 1, QColor(r, g, b, 160));
+    }
+
+    // Map region ticks (vertical marks on left edge)
+    const auto &regions = m_hex->mapRegions();
+    if (!regions.isEmpty()) {
+        double romSz = (double)data.size();
+        for (const MapRegion &mr : regions) {
+            int py1 = (int)((double)mr.start / romSz * h);
+            int py2 = (int)(((double)mr.start + mr.length) / romSz * h);
+            py1 = qBound(0, py1, h - 1);
+            py2 = qBound(py1 + 1, py2, h);
+            p.fillRect(0, py1, 3, qMax(1, py2 - py1), QColor(58, 220, 255, 180));
+        }
+    }
+
+    // Viewport indicator
+    int totalRows = (data.size() + m_hex->bytesPerRow() - 1) / m_hex->bytesPerRow();
+    if (totalRows > 0) {
+        int vpH = m_hex->viewport()->height();
+        int visibleRows = (vpH - m_hex->headerHeight()) / m_hex->rowHeight();
+        int startRow = m_hex->verticalScrollBar()->value();
+
+        int vy = (int)((double)startRow / totalRows * h);
+        int vh = qMax(4, (int)((double)visibleRows / totalRows * h));
+
+        // Darken areas outside viewport
+        p.fillRect(0, 0, w, vy, QColor(0, 0, 0, 80));
+        p.fillRect(0, vy + vh, w, h - vy - vh, QColor(0, 0, 0, 80));
+
+        // Viewport frame
+        p.setPen(QPen(QColor(58, 145, 208), 1.5));
+        p.drawRect(1, vy, w - 2, vh);
+    }
+}
+
+void HexOverviewBar::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        m_dragging = true;
+        emit scrollRequested(rowAtY(event->pos().y()));
+    }
+}
+
+void HexOverviewBar::mouseMoveEvent(QMouseEvent *event)
+{
+    if (m_dragging)
+        emit scrollRequested(rowAtY(event->pos().y()));
+}
+
+void HexOverviewBar::mouseReleaseEvent(QMouseEvent *)
+{
+    m_dragging = false;
+}
