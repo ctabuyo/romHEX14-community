@@ -14,6 +14,7 @@
 #include <QPainter>
 #include <QStyledItemDelegate>
 #include <QApplication>
+#include <QMenu>
 
 // ── Inline delegate: dim address + description in a single column ─────────────
 static const int kAddrRole = Qt::UserRole + 1;
@@ -111,7 +112,9 @@ MapListWidget::MapListWidget(QWidget *parent)
     m_tree->setSortingEnabled(true);
     m_tree->sortByColumn(0, Qt::AscendingOrder);
     m_tree->setUniformRowHeights(true);
-    m_tree->setSelectionMode(QAbstractItemView::SingleSelection);
+    // Sprint E — multi-select for bulk edit (Ctrl+click / Shift+click).
+    // Single-select callers (currentItem()) keep working unchanged.
+    m_tree->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_tree->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(QHeaderView::Interactive);
@@ -151,6 +154,43 @@ MapListWidget::MapListWidget(QWidget *parent)
     connect(m_tree, &QTreeWidget::itemActivated, this, &MapListWidget::onItemClicked);
     connect(&AppConfig::instance(), &AppConfig::displaySettingsChanged,
             this, &MapListWidget::populateTree);
+
+    // Sprint E — context menu with bulk-edit entry.  Single-select rows
+    // get a single "Edit map…" entry that just fires `mapSelected`;
+    // multi-select rows get "Bulk edit N maps…" which emits the new
+    // `bulkEditRequested` signal.
+    m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_tree, &QTreeWidget::customContextMenuRequested,
+            this, [this](const QPoint &pos) {
+                const QVector<MapInfo> sel = selectedMaps();
+                if (sel.isEmpty()) return;
+                QMenu menu(m_tree);
+                if (sel.size() >= 2) {
+                    menu.addAction(tr("Bulk edit %1 maps…").arg(sel.size()),
+                                   [this, sel]() {
+                                       emit bulkEditRequested(sel);
+                                   });
+                } else {
+                    menu.addAction(tr("Open map"), [this, sel]() {
+                        emit mapSelected(sel.first());
+                    });
+                }
+                menu.exec(m_tree->viewport()->mapToGlobal(pos));
+            });
+}
+
+QVector<MapInfo> MapListWidget::selectedMaps() const
+{
+    QVector<MapInfo> out;
+    const auto items = m_tree->selectedItems();
+    out.reserve(items.size());
+    for (auto *it : items) {
+        bool ok = false;
+        const int idx = it->data(0, Qt::UserRole).toInt(&ok);
+        if (!ok || idx < 0 || idx >= m_allMaps.size()) continue;
+        out.append(m_allMaps[idx]);
+    }
+    return out;
 }
 
 void MapListWidget::setMaps(const QVector<MapInfo> &maps, uint32_t baseAddress)

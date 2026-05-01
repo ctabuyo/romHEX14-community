@@ -28,6 +28,21 @@ set(CMAKE_AUTORCC ON)
 
 option(RX14_PRO_BUILD "Include account system, update checker, and premium feature gates" OFF)
 
+# ── Debug RPC + on-disk D:\rx14-debug logger ────────────────────────────────
+# When enabled, builds in a TCP JSON-line RPC server (127.0.0.1:48714) that
+# lets external dev tooling query UI state, trigger actions, and grab widget
+# screenshots.  Also redirects the file logger to D:\rx14-debug\rx14.log so
+# the dev workspace doesn't fill up the system drive.  Default ON for any
+# non-Release build.
+if(NOT DEFINED RX14_DEBUG_RPC_DEFAULT)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(RX14_DEBUG_RPC_DEFAULT OFF)
+    else()
+        set(RX14_DEBUG_RPC_DEFAULT ON)
+    endif()
+endif()
+option(RX14_DEBUG_RPC "Enable in-app TCP debug RPC + D:\\rx14-debug logging" ${RX14_DEBUG_RPC_DEFAULT})
+
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Network LinguistTools)
 find_package(ZLIB QUIET)
 
@@ -84,6 +99,8 @@ set(SOURCES
     src/introwizard.cpp
     src/createmapdlg.cpp
     src/dtcdialog.cpp
+    src/diffpanel.cpp
+    src/alignmentmap.cpp
     src/olsparser.cpp
     src/kpparser.cpp
     src/kpimportdlg.cpp
@@ -98,10 +115,32 @@ set(SOURCES
     src/io/ols/OlsKennfeldParser.cpp
     src/io/ols/OlsImporter.cpp
     src/io/ols/KpImporter.cpp
+    src/io/ols/OlsProjectBuilder.cpp
+    src/io/ols/MapAutoDetect.cpp
+    src/io/ols/EcuAutoDetect.cpp
     src/io/ols/ZipDecompressor.cpp
     src/io/rx14container.cpp
     src/util/Blake3.cpp
+    # src/dtc/* — entire DTC port REMOVED.  Detection, DTC disable and
+    # feature application now live on the cloudfx server (see CHANGELOG).
+    # The community client only sends ROM bytes + family hint and consumes
+    # the result.
+    src/savepoints/SavepointManager.cpp
+    src/savepoints/SavepointsPanel.cpp
+    src/edit/SliderEditDlg.cpp
+    src/annotations/AnnotationStore.cpp
+    src/io/MapListExporter.cpp
+    src/edit/MapFingerprint.cpp
+    src/edit/FindSimilarMapsDlg.cpp
 )
+
+# ── Debug RPC sources (gated by RX14_DEBUG_RPC) ─────────────────────────────
+if(RX14_DEBUG_RPC)
+    list(APPEND SOURCES
+        src/debug/DebugLog.cpp
+        src/debug/DebugRpc.cpp
+    )
+endif()
 
 set(HEADERS
     src/mainwindow.h
@@ -143,6 +182,8 @@ set(HEADERS
     src/introwizard.h
     src/createmapdlg.h
     src/dtcdialog.h
+    src/diffpanel.h
+    src/alignmentmap.h
     src/olsparser.h
     src/kpparser.h
     src/kpimportdlg.h
@@ -157,10 +198,27 @@ set(HEADERS
     src/io/ols/OlsKennfeldParser.h
     src/io/ols/OlsImporter.h
     src/io/ols/KpImporter.h
+    src/io/ols/OlsProjectBuilder.h
+    src/io/ols/MapAutoDetect.h
+    src/io/ols/EcuAutoDetect.h
     src/io/ols/ZipDecompressor.h
     src/io/rx14container.h
     src/util/Blake3.h
+    src/savepoints/SavepointManager.h
+    src/savepoints/SavepointsPanel.h
+    src/edit/SliderEditDlg.h
+    src/annotations/AnnotationStore.h
+    src/io/MapListExporter.h
+    src/edit/MapFingerprint.h
+    src/edit/FindSimilarMapsDlg.h
 )
+
+if(RX14_DEBUG_RPC)
+    list(APPEND HEADERS
+        src/debug/DebugLog.h
+        src/debug/DebugRpc.h
+    )
+endif()
 
 # ── Pro build: account system, update checker, premium feature gates ──────────
 if(RX14_PRO_BUILD)
@@ -247,6 +305,10 @@ target_link_libraries(rx14 PRIVATE
 if(RX14_PRO_BUILD)
     target_compile_definitions(rx14 PRIVATE RX14_PRO_BUILD)
 endif()
+if(RX14_DEBUG_RPC)
+    target_compile_definitions(rx14 PRIVATE RX14_DEBUG_RPC)
+    message(STATUS "RX14: Debug RPC enabled (TCP 127.0.0.1:48714, log → D:/rx14-debug/rx14.log)")
+endif()
 if(ZLIB_FOUND)
     target_link_libraries(rx14 PRIVATE ZLIB::ZLIB)
 else()
@@ -304,6 +366,15 @@ if(WIN32)
                 "$<TARGET_FILE_DIR:rx14>/ChecksumDLL"
             COMMENT "Deploying ChecksumDLL folder (148 ECU DLLs)")
     endif()
+endif()
+
+# Strip absolute paths from __FILE__ / debug info so release binaries do
+# not embed the local checkout location.  Available on gcc/clang 8+; MSVC
+# does not expand __FILE__ to absolute paths by default for relative
+# source paths, so this is a no-op there.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(rx14 PRIVATE
+        "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
 
 # Security hardening for release builds

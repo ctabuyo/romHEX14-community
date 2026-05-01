@@ -48,6 +48,12 @@ void Logger::init(const QString &path)
 
 void Logger::log(Level level, const QString &msg, const char *file, int line)
 {
+    log(level, QString(), msg, file, line);
+}
+
+void Logger::log(Level level, const QString &category, const QString &msg,
+                 const char *file, int line)
+{
     static const char *prefixes[] = { "DBG", "INF", "WRN", "ERR", "CRT" };
     const char *pfx = (level >= 0 && level <= Critical) ? prefixes[level] : "???";
 
@@ -61,7 +67,12 @@ void Logger::log(Level level, const QString &msg, const char *file, int line)
         loc = QString(" [%1:%2]").arg(fname).arg(line);
     }
 
-    QString line_str = QString("[%1][%2]%3  %4\n").arg(ts).arg(pfx).arg(loc).arg(msg);
+    QString cat;
+    if (!category.isEmpty() && category != "default")
+        cat = QString("[%1]").arg(category);
+
+    QString line_str = QString("[%1][%2]%3%4  %5\n")
+                           .arg(ts).arg(pfx).arg(cat).arg(loc).arg(msg);
 
     {
         QMutexLocker lk(&m_mutex);
@@ -72,14 +83,26 @@ void Logger::log(Level level, const QString &msg, const char *file, int line)
         }
     }
 
-    // Also echo to Qt debug output
-    switch (level) {
-    case Debug:    qDebug().noquote()    << line_str.trimmed(); break;
-    case Info:     qInfo().noquote()     << line_str.trimmed(); break;
-    case Warning:  qWarning().noquote()  << line_str.trimmed(); break;
-    case Error:    qCritical().noquote() << line_str.trimmed(); break;
-    case Critical: qCritical().noquote() << line_str.trimmed(); break;
-    }
+    // NOTE: we deliberately do NOT echo back through qDebug/qInfo/qWarning
+    // here.  When qInstallMessageHandler(qtMessageHandler) is active, doing so
+    // would re-enter this method and either deadlock on the QMutex or recurse
+    // infinitely.  The original Logger::log relied on the absence of such a
+    // handler at low levels — but main.cpp installs one before QApplication.
+    // Stderr echo is sufficient for debugging.
+    fputs(line_str.toLocal8Bit().constData(), stderr);
+}
+
+QStringList Logger::tail(int maxLines) const
+{
+    if (m_path.isEmpty() || maxLines <= 0) return {};
+    QFile f(m_path);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return {};
+    // Read whole file (log capped at 5 MiB by rotation, fits easily).
+    const QString all = QString::fromUtf8(f.readAll());
+    QStringList lines = all.split('\n', Qt::SkipEmptyParts);
+    if (lines.size() > maxLines)
+        lines = lines.mid(lines.size() - maxLines);
+    return lines;
 }
 
 // Called from signal handler — no Qt, no dynamic allocation

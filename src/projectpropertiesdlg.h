@@ -12,6 +12,7 @@
 #include <QComboBox>
 #include <QPlainTextEdit>
 #include <QLabel>
+#include <QPushButton>
 #include "project.h"
 #include "ecudetector.h"
 
@@ -31,6 +32,7 @@ private slots:
     void autoDetectEcu();
     void accept() override;
     void onBrandChanged(const QString &brand);
+    void validateRequiredFields();
 
 private:
     QWidget *buildSection(const QString &label, const QColor &color, QWidget *content);
@@ -39,6 +41,7 @@ private:
 
     void populate();
     void collect();
+    QPushButton *m_okBtn = nullptr;
 
     // Auto-fill helpers
     QString detectProducer(const QString &ecuFamily) const;
@@ -65,8 +68,8 @@ private:
 
     // ECU
     QComboBox *m_ecuUse        = nullptr;
-    QLineEdit *m_ecuProducer   = nullptr;
-    QLineEdit *m_ecuType       = nullptr;
+    QComboBox *m_ecuProducer   = nullptr;
+    QComboBox *m_ecuType       = nullptr;
     QLineEdit *m_ecuNrProd     = nullptr;
     QLineEdit *m_ecuNrEcu      = nullptr;
     QLineEdit *m_ecuSwNum      = nullptr;

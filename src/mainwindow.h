@@ -46,7 +46,16 @@
 class AIAssistant;
 class UpdateChecker;
 class CommandPalette;
+class DiffPanel;
+class SavepointManager;
+class SavepointsPanel;
+class QDockWidget;
 struct PaletteEntry;
+#ifdef RX14_DEBUG_RPC
+class DebugRpc;
+class QJsonObject;
+class QJsonArray;
+#endif
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -55,6 +64,61 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
 
     enum class PanelFilter { All, Modified, Starred, Recent, TypeValue, TypeCurve, TypeMap };
+
+#ifdef RX14_DEBUG_RPC
+    // ── Debug RPC entry points ────────────────────────────────────────────
+    // Called from DebugRpc on the Qt main thread.  All return QJsonObject /
+    // bool so the RPC layer can forward results without re-implementing
+    // policy.  Read-only methods are const.
+    QJsonObject debugStateSnapshot() const;
+    bool        debugTakeScreenshot(const QString &target,
+                                    QString *outPath,
+                                    QString *outErr);
+    bool        debugTriggerAction(const QString &name,
+                                   bool *outChecked,
+                                   QString *outErr);
+    bool        debugSetScroll(const QString &target, int subIdx, int value,
+                               QString *outErr);
+    bool        debugSwitchView(int subIdx, int viewIdx, QString *outErr);
+    /// Headless ROM load — bypasses ProjectPropertiesDialog so the dev
+    /// harness can drive end-to-end tests over RPC.  Same effect as the
+    /// user picking File → New Project and clicking through.
+    bool        debugLoadRom(const QString &romPath, QString *outErr);
+    /// Apply an edit operation directly without going through UI dialogs.
+    /// Used by RPC harness for end-to-end testing.  @p op is one of the
+    /// EditOp enum values cast to int.  @p start/@p end are byte range.
+    /// @p value is used by Absolute (set to v) and Relative (delta v).
+    bool        debugApplyEdit(int subIdx, int op, int start, int end,
+                               double value, QString *outErr);
+    /// Add an annotation programmatically. @p length defaults to 1.
+    /// Empty @p text means a pure marker.
+    bool        debugAddAnnotation(int subIdx, qint64 addr, const QString &text,
+                                   qint64 length, QString *outErr);
+    /// Snapshot the active project's annotation list for verification.
+    QJsonArray  debugAnnotationList(int subIdx) const;
+    /// Sprint D — invoke MapListExporter without going through QFileDialog.
+    bool        debugExportMapList(int subIdx, bool csv,
+                                   const QString &path, QString *outErr);
+    /// Sprint F — fingerprint a map by name and return matches above @p threshold.
+    QJsonArray  debugFindSimilar(int subIdx, const QString &refMapName,
+                                 double threshold) const;
+    /// Open a saved .rx14proj from disk through the same path the user
+    /// would take via File → Open.
+    bool        debugOpenProject(const QString &path, QString *outErr);
+    /// First N maps of the active project as JSON array (name, address, dims).
+    QJsonArray  debugMapList(int subIdx, int limit) const;
+    /// Read up to 256 bytes of currentData starting at @p addr — used by the
+    /// E2E harness to verify edit operations actually changed the bytes.
+    QString     debugReadBytes(int subIdx, qint64 addr, int len) const;
+    /// Apply an edit op to *each* of the given map names without going through
+    /// the QMessageBox::question UI confirmation. Same code path as runBulkEdit.
+    bool        debugBulkEdit(int subIdx, const QStringList &mapNames,
+                              int op, double v, QString *outErr);
+    /// Trigger one undo step on the active view's WaveformEditor.
+    bool        debugUndo(int subIdx, QString *outErr);
+    /// Remove all annotations whose addr equals @p addr.
+    bool        debugRemoveAnnotation(int subIdx, qint64 addr, QString *outErr);
+#endif
 
 protected:
     void dragEnterEvent(QDragEnterEvent *e) override;
@@ -117,6 +181,8 @@ private slots:
 
     // 2D view sync
     void onWaveSyncScroll(int scrollOffset);
+    void onWaveSyncZoom(int sliderValue);   // fan out zoom slider across views
+    void onHexSyncScroll(int byteOffset);
     void onSyncViewSwitch(int index);
 
 private:
@@ -302,6 +368,47 @@ private:
     QAction *m_actNextMap     = nullptr;
     QAction *m_actSyncCursors = nullptr;
 
+    // ── Selection / map editing operations (Sprint A) ──────────────────
+    // Funnels the active view's selection through the WaveformEditor of
+    // its ProjectView so all three views (hex / waveform / 3D) share one
+    // undo stack per project.  See applyEditOp() in mainwindow.cpp.
+    enum class EditOp {
+        ValuePlus1, ValueMinus1,
+        Absolute, Relative, Slider, RoundLimit,
+        Original, Interpolate, Smooth, Flatten,
+    };
+    struct EditParams {
+        double value     = 0.0;     // Absolute, Slider
+        double delta     = 0.0;     // Relative add
+        double scaleVal  = 1.0;     // Relative multiply
+        bool   isScale   = false;   // distinguishes add vs multiply
+        int    multiple  = 1;       // RoundLimit
+        double minVal    = 0.0;     // RoundLimit / Slider
+        double maxVal    = 0.0;     // RoundLimit / Slider
+    };
+    QAction *m_actValPlus1    = nullptr;
+    QAction *m_actValMinus1   = nullptr;
+    QAction *m_actChangeAbs   = nullptr;
+    QAction *m_actChangeRel   = nullptr;
+    QAction *m_actChangeSlider = nullptr;
+    QAction *m_actRoundLimit  = nullptr;
+    QAction *m_actOriginalVal = nullptr;
+    QAction *m_actInterpolate = nullptr;
+    QAction *m_actSmooth      = nullptr;
+    QAction *m_actFlatten     = nullptr;
+    QAction *m_actAgain       = nullptr;
+    EditOp     m_lastEditOp = EditOp::ValuePlus1;
+    EditParams m_lastEditParams;
+    bool       m_haveLastEdit = false;
+    void applyEditOp(EditOp op, const EditParams &p);
+    void onEditOpFromMenu(EditOp op);    // helper that pops dialog if needed
+    /// Slot connected to HexWidget::editOpRequested / Map3DWidget::editOpRequested.
+    /// Wrapped as a real member function (not a lambda) because
+    /// Qt::UniqueConnection refuses lambdas — using a lambda crashes with
+    /// "Unique connection requires the slot to be a pointer to a member
+    /// function of a QObject subclass." (qobject.h:263)
+    void onEditOpRequestedFromView(int code);
+
     // ── Command palette (Cmd/Ctrl+K) ───────────────────────────────────
     QAction        *m_actCmdPalette = nullptr;
     CommandPalette *m_cmdPalette    = nullptr;  // lazily constructed
@@ -340,6 +447,57 @@ private:
     // ── Visual toggles ─────────────────────────────────────────────────
     QAction *m_actHeightColors = nullptr;
 
+    // ── Differences panel (View → Differences) ─────────────────────────
+    QAction     *m_actToggleDiff = nullptr;
+    QDockWidget *m_diffDock      = nullptr;
+    DiffPanel   *m_diffPanel     = nullptr;
+
+    // ── Differences-to-Original overlay (View → Diff vs Original) ──────
+    // Sprint B: toggle that highlights every byte that differs from
+    // Project::originalData across hex / waveform / 3D map.  Persisted
+    // in QSettings under "view/showOriginalDiff".
+    QAction *m_actDiffOriginal = nullptr;
+    bool     m_showOriginalDiff = false;
+    void onToggleDiffOriginal(bool on);
+
+    // ── Annotations (Sprint C) ──────────────────────────────────────────
+    QAction *m_actInsertComment = nullptr;
+    QAction *m_actInsertMarker  = nullptr;
+    QAction *m_actDeleteComment = nullptr;
+    QAction *m_actNextMarker    = nullptr;
+    QAction *m_actPrevMarker    = nullptr;
+    void onInsertComment();
+    void onInsertMarker();
+    void onDeleteComment();
+    void onJumpMarker(bool forward);
+    void exportMapListCsv();
+    void exportMapListJson();
+    void runBulkEdit(const QVector<MapInfo> &maps);
+    void runFindSimilar(const MapInfo &reference);
+    struct AnnoCtx {
+        class AnnotationStore *store = nullptr;
+        qint64 offset = -1;
+        Project *project = nullptr;
+        ProjectView *view = nullptr;
+        bool ok = false;
+    };
+    AnnoCtx resolveAnnoCtx();
+
+    // ── Tuning Branches / Savepoints (View → Tuning Branches) ──────────
+    QAction          *m_actToggleSavepoints = nullptr;
+    QDockWidget      *m_savepointsDock      = nullptr;
+    SavepointsPanel  *m_savepointsPanel     = nullptr;
+    SavepointManager *m_savepoints          = nullptr;
+    void onSavepointsSwitchProject();
+    void onDiffRowActivated(quint32 address);
+    void onProjectDataChangedForDiff();   // refreshes DiffPanel when any
+                                          // open project's bytes change
+    void onDiffAlignmentChanged();        // re-aligns B/C views from A's
+                                          // current scroll position
+    void onDiffComparisonChanged();       // pushes B's bytes (offset-shifted)
+                                          // into A's hex/waveform as comparison
+                                          // data so colour overlays show up
+
     // ── AI Assistant ───────────────────────────────────────────────────
     QAction      *m_actToggleAI  = nullptr;
     AIAssistant  *m_aiAssistant  = nullptr;
@@ -363,4 +521,9 @@ private:
     QString        m_updateUrl;
     QString        m_updateVersion;
     QString        m_updateChangelog;
+
+#ifdef RX14_DEBUG_RPC
+    // ── Debug RPC server (TCP 127.0.0.1:48714) ────────────────────────────
+    DebugRpc *m_debugRpc = nullptr;
+#endif
 };

@@ -158,14 +158,40 @@ ProjectPropertiesDialog::ProjectPropertiesDialog(Project *project, QWidget *pare
     m_ecuUse = new QComboBox();
     m_ecuUse->addItems({tr("Engine"), tr("Gearbox"), tr("ABS"), tr("Airbag"),
                          tr("Instrument"), tr("Body"), tr("Other")});
-    m_ecuProducer = field(tr("e.g. Bosch"));
-    m_ecuType     = field(tr("e.g. MED17.1"));
+    m_ecuProducer = new QComboBox();
+    m_ecuProducer->setEditable(true);
+    m_ecuProducer->setInsertPolicy(QComboBox::NoInsert);
+    m_ecuProducer->lineEdit()->setPlaceholderText(tr("e.g. Bosch"));
+    m_ecuProducer->addItem(QString());                // empty-default
+    m_ecuProducer->addItems(ols::EcuAutoDetect::knownProducers());
+    m_ecuProducer->setCurrentIndex(0);
     {
-        auto *ecuCompleter = new QCompleter(VehicleDatabase::instance().ecuNamesFlat(), m_ecuType);
+        auto *prodCompleter = new QCompleter(ols::EcuAutoDetect::knownProducers(), m_ecuProducer);
+        prodCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+        prodCompleter->setFilterMode(Qt::MatchContains);
+        m_ecuProducer->setCompleter(prodCompleter);
+    }
+
+    m_ecuType = new QComboBox();
+    m_ecuType->setEditable(true);
+    m_ecuType->setInsertPolicy(QComboBox::NoInsert);
+    m_ecuType->lineEdit()->setPlaceholderText(tr("e.g. MED17.1"));
+    m_ecuType->addItem(QString());
+    {
+        // Merge the auto-detect ECU list with the historical VehicleDatabase
+        // names so users keep the existing dataset coverage while gaining
+        // every signature we can recognise.
+        QStringList ecus = ols::EcuAutoDetect::knownEcus();
+        const QStringList vdb = VehicleDatabase::instance().ecuNamesFlat();
+        for (const QString &v : vdb) if (!ecus.contains(v)) ecus.append(v);
+        ecus.sort();
+        m_ecuType->addItems(ecus);
+        auto *ecuCompleter = new QCompleter(ecus, m_ecuType);
         ecuCompleter->setCaseSensitivity(Qt::CaseInsensitive);
         ecuCompleter->setFilterMode(Qt::MatchContains);
         m_ecuType->setCompleter(ecuCompleter);
     }
+    m_ecuType->setCurrentIndex(0);
     m_ecuNrProd   = field(tr("e.g. 03G906016GN"));
     m_ecuNrEcu    = field(tr("e.g. 0281012113"));
     m_ecuSwNum    = field(tr("e.g. 518901"));
@@ -344,21 +370,58 @@ ProjectPropertiesDialog::ProjectPropertiesDialog(Project *project, QWidget *pare
     // in loadFromProject()). Only Finish + Cancel remain.
     auto *btnRow = new QHBoxLayout();
     btnRow->setContentsMargins(10, 0, 10, 0);
-    auto *okBtn     = new QPushButton(tr("Finish"));
-    okBtn->setDefault(true);
-    okBtn->setStyleSheet("border-color:#388bfd; color:#58a6ff;");
+    m_okBtn         = new QPushButton(tr("Finish"));
+    m_okBtn->setDefault(true);
+    m_okBtn->setStyleSheet("border-color:#388bfd; color:#58a6ff;");
     auto *cancelBtn = new QPushButton(tr("Cancel"));
     btnRow->addStretch();
-    btnRow->addWidget(okBtn);
+    btnRow->addWidget(m_okBtn);
     btnRow->addWidget(cancelBtn);
     root->addLayout(btnRow);
 
-    connect(okBtn,     &QPushButton::clicked, this, &ProjectPropertiesDialog::accept);
+    connect(m_okBtn,   &QPushButton::clicked, this, &ProjectPropertiesDialog::accept);
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
     connect(m_brand, &QComboBox::currentTextChanged,
             this, &ProjectPropertiesDialog::onBrandChanged);
 
+    // ── Required-fields validation: Producer + Build must be filled ──────
+    // Highlight in red while empty and gate the Finish button on them.
+    connect(m_ecuProducer, &QComboBox::currentTextChanged,
+            this, [this](const QString &){ validateRequiredFields(); });
+    connect(m_ecuProducer->lineEdit(), &QLineEdit::textChanged,
+            this, [this](const QString &){ validateRequiredFields(); });
+    connect(m_ecuType, &QComboBox::currentTextChanged,
+            this, [this](const QString &){ validateRequiredFields(); });
+    connect(m_ecuType->lineEdit(), &QLineEdit::textChanged,
+            this, [this](const QString &){ validateRequiredFields(); });
+
+    // ── Cascade Build dropdown when Producer changes ─────────────────────
+    // Picking "Bosch" filters the Build list to Bosch-only ECUs (EDC17,
+    // MED17, MD1, MG1, EDC15, …) so the user doesn't see Continental SIDs
+    // or Marelli MJDs in the same dropdown.  Empty Producer = full list.
+    connect(m_ecuProducer, &QComboBox::currentTextChanged,
+            this, [this](const QString &producer) {
+                const QString prevBuild = m_ecuType->currentText();
+                QStringList ecus = ols::EcuAutoDetect::knownEcusForProducer(producer.trimmed());
+                if (producer.trimmed().isEmpty()) {
+                    const QStringList vdb = VehicleDatabase::instance().ecuNamesFlat();
+                    for (const QString &v : vdb) if (!ecus.contains(v)) ecus.append(v);
+                    ecus.sort();
+                }
+                QSignalBlocker block(m_ecuType);
+                m_ecuType->clear();
+                m_ecuType->addItem(QString());
+                m_ecuType->addItems(ecus);
+                m_ecuType->setCurrentText(prevBuild);
+                auto *cmp = new QCompleter(ecus, m_ecuType);
+                cmp->setCaseSensitivity(Qt::CaseInsensitive);
+                cmp->setFilterMode(Qt::MatchContains);
+                m_ecuType->setCompleter(cmp);
+                validateRequiredFields();
+            });
+
     populate();
+    validateRequiredFields();
 
     restoreGeometry(QSettings("CT14", "RX14")
                     .value("dialogGeometry/ProjectPropertiesDlg").toByteArray());
@@ -369,6 +432,62 @@ void ProjectPropertiesDialog::closeEvent(QCloseEvent *event)
     QSettings("CT14", "RX14")
         .setValue("dialogGeometry/ProjectPropertiesDlg", saveGeometry());
     QDialog::closeEvent(event);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Required-fields validation: Producer + Build (ECU type) must be filled
+// before the dialog can be accepted.  Both combos are highlighted red while
+// empty, and the Finish button stays disabled.
+// ─────────────────────────────────────────────────────────────────────────────
+void ProjectPropertiesDialog::validateRequiredFields()
+{
+    const bool prodEmpty  = m_ecuProducer && m_ecuProducer->currentText().trimmed().isEmpty();
+    const bool buildEmpty = m_ecuType     && m_ecuType->currentText().trimmed().isEmpty();
+
+    auto paint = [](QComboBox *cb, bool missing) {
+        if (!cb) return;
+        if (missing) {
+            // Inline stylesheet on a QComboBox shadows the global
+            // style.qss rules, so we MUST re-declare the popup palette
+            // (matched to resources/style.qss:206-213) — otherwise the
+            // dropdown ends up white-on-white as soon as we set any
+            // QComboBox QSS rule on this widget.
+            cb->setStyleSheet(QStringLiteral(
+                "QComboBox {"
+                " border: 2px solid #ff4040;"
+                " background-color: rgba(255, 64, 64, 0.22);"
+                " color: #f0f0f0;"
+                " border-radius: 3px;"
+                " padding: 2px 6px;"
+                "}"
+                "QComboBox QAbstractItemView {"
+                " background: #161b22;"
+                " color: #c9d1d9;"
+                " border: 1px solid #30363d;"
+                " selection-background-color: #1f6feb;"
+                " selection-color: #ffffff;"
+                " outline: none;"
+                "}"));
+            cb->setToolTip(QObject::tr("Required — pick an ECU before continuing"));
+        } else {
+            cb->setStyleSheet(QString());
+            cb->setToolTip(QString());
+        }
+    };
+    paint(m_ecuProducer, prodEmpty);
+    paint(m_ecuType,     buildEmpty);
+
+    if (m_okBtn) {
+        const bool blocked = prodEmpty || buildEmpty;
+        m_okBtn->setEnabled(!blocked);
+        if (blocked) {
+            m_okBtn->setToolTip(tr("Fill in Producer and Build (ECU) to continue"));
+            m_okBtn->setStyleSheet("color: #888;");
+        } else {
+            m_okBtn->setToolTip(QString());
+            m_okBtn->setStyleSheet("border-color:#388bfd; color:#58a6ff;");
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -480,18 +599,52 @@ void ProjectPropertiesDialog::autoFill()
 {
     if (m_project->currentData.isEmpty()) return;
 
-    ECUDetection det = detectECU(m_project->currentData);
+    // Primary: use the same 150-signature table the DTC engine uses, so
+    // the user-selected (Producer, Build) pair stays in sync with what the
+    // wizard later treats as authoritative.  Fall back to the legacy
+    // ecudetector.h heuristics only if EcuAutoDetect didn't fire.
+    const ols::EcuDetectionResult ecu =
+        ols::EcuAutoDetect::detect(m_project->currentData);
 
-    if (!det.identifier.isEmpty() && m_ecuType->text().isEmpty())
-        m_ecuType->setText(det.identifier);
+    QString fam, ecuName, producer, hwNumber, swNumber, swVersion, prodNo;
+    if (ecu.ok) {
+        fam       = ecu.family;
+        ecuName   = ecu.ecuName;          // family + variant joined
+        // Producer comes from the same family→producer map EcuAutoDetect uses
+        // when applyToFields() runs — request it through the field-applier
+        // by routing into a temporary string so we get the canonical name.
+        ols::EcuMetadataFields tmp;
+        QString tmpProd; tmp.producer = &tmpProd;
+        ols::EcuAutoDetect::applyToFields(ecu, tmp, /*overwrite=*/true);
+        producer  = tmpProd;
+        hwNumber  = ecu.hwNumber;
+        swNumber  = ecu.swNumber;
+        swVersion = ecu.swVersion;
+        prodNo    = ecu.productionNo;
+    } else {
+        // Legacy heuristic fallback (the old `ecudetector.h` path).
+        const ECUDetection det = detectECU(m_project->currentData);
+        fam     = det.family;
+        ecuName = det.identifier;
+        if (!fam.isEmpty()) producer = detectProducer(fam);
+    }
 
-    const QString fam = det.family;
+    if (!ecuName.isEmpty() && m_ecuType->currentText().isEmpty())
+        m_ecuType->setCurrentText(ecuName);
+    if (!producer.isEmpty() && m_ecuProducer->currentText().isEmpty())
+        m_ecuProducer->setCurrentText(producer);
     if (!fam.isEmpty()) {
-        if (m_ecuProducer->text().isEmpty())
-            m_ecuProducer->setText(detectProducer(fam));
         const QString proc = detectProcessor(fam);
         if (!proc.isEmpty()) m_ecuProc->setText(proc);
     }
+    if (!hwNumber.isEmpty() && m_ecuNrEcu->text().isEmpty())
+        m_ecuNrEcu->setText(hwNumber);
+    if (!swNumber.isEmpty() && m_ecuSwNum->text().isEmpty())
+        m_ecuSwNum->setText(swNumber);
+    if (!swVersion.isEmpty() && m_ecuSwVer->text().isEmpty())
+        m_ecuSwVer->setText(swVersion);
+    if (!prodNo.isEmpty() && m_ecuNrProd->text().isEmpty())
+        m_ecuNrProd->setText(prodNo);
 
     m_ecuUse->setCurrentText("Engine");
 
@@ -532,8 +685,8 @@ void ProjectPropertiesDialog::autoDetectEcu()
     // Stage results in scratch QStrings (mirroring the live UI values),
     // run applyToFields, then copy back to the widgets. This keeps the
     // overwrite policy in one place.
-    QString producer    = m_ecuProducer->text().trimmed();
-    QString ecuName     = m_ecuType->text().trimmed();
+    QString producer    = m_ecuProducer->currentText().trimmed();
+    QString ecuName     = m_ecuType->currentText().trimmed();
     QString hwNumber    = m_ecuNrEcu->text().trimmed();
     QString swNumber    = m_ecuSwNum->text().trimmed();
     QString swVersion   = m_ecuSwVer->text().trimmed();
@@ -551,8 +704,8 @@ void ProjectPropertiesDialog::autoDetectEcu()
     const int filled =
         ols::EcuAutoDetect::applyToFields(res, fields, /*overwrite=*/false);
 
-    if (!producer.isEmpty())     m_ecuProducer->setText(producer);
-    if (!ecuName.isEmpty())      m_ecuType->setText(ecuName);
+    if (!producer.isEmpty())     m_ecuProducer->setCurrentText(producer);
+    if (!ecuName.isEmpty())      m_ecuType->setCurrentText(ecuName);
     if (!hwNumber.isEmpty())     m_ecuNrEcu->setText(hwNumber);
     if (!swNumber.isEmpty())     m_ecuSwNum->setText(swNumber);
     if (!swVersion.isEmpty())    m_ecuSwVer->setText(swVersion);
@@ -588,8 +741,8 @@ void ProjectPropertiesDialog::populate()
     if (p->year > 0) m_year->setValue(p->year);
 
     m_ecuUse->setCurrentText(p->ecuUse.isEmpty() ? "Engine" : p->ecuUse);
-    m_ecuProducer->setText(p->ecuProducer);
-    m_ecuType->setText(p->ecuType);
+    m_ecuProducer->setCurrentText(p->ecuProducer);
+    m_ecuType->setCurrentText(p->ecuType);
     m_ecuNrProd->setText(p->ecuNrProd);
     m_ecuNrEcu->setText(p->ecuNrEcu);
     m_ecuSwNum->setText(p->ecuSwNumber);
@@ -667,8 +820,8 @@ void ProjectPropertiesDialog::populate()
             fields.productionNo = &productionNo;
             fields.engineCode   = &engineCode;
             ols::EcuAutoDetect::applyToFields(res, fields, /*overwrite=*/true);
-            if (!producer.isEmpty())     m_ecuProducer->setText(producer);
-            if (!ecuName.isEmpty())      m_ecuType->setText(ecuName);
+            if (!producer.isEmpty())     m_ecuProducer->setCurrentText(producer);
+            if (!ecuName.isEmpty())      m_ecuType->setCurrentText(ecuName);
             if (!hwNumber.isEmpty())     m_ecuNrEcu->setText(hwNumber);
             if (!swNumber.isEmpty())     m_ecuSwNum->setText(swNumber);
             if (!swVersion.isEmpty())    m_ecuSwVer->setText(swVersion);
@@ -708,10 +861,10 @@ void ProjectPropertiesDialog::populate()
     // .rx14proj saved at the end of new-project carries the ECU metadata
     // and subsequent opens don't need to re-run detection.
     if (m_project) {
-        if (!m_ecuProducer->text().trimmed().isEmpty())
-            m_project->ecuProducer = m_ecuProducer->text().trimmed();
-        if (!m_ecuType->text().trimmed().isEmpty())
-            m_project->ecuType = m_ecuType->text().trimmed();
+        if (!m_ecuProducer->currentText().trimmed().isEmpty())
+            m_project->ecuProducer = m_ecuProducer->currentText().trimmed();
+        if (!m_ecuType->currentText().trimmed().isEmpty())
+            m_project->ecuType = m_ecuType->currentText().trimmed();
         if (!m_ecuNrEcu->text().trimmed().isEmpty())
             m_project->ecuNrEcu = m_ecuNrEcu->text().trimmed();
         if (!m_ecuSwNum->text().trimmed().isEmpty())
@@ -744,8 +897,8 @@ void ProjectPropertiesDialog::collect()
     p->year = (m_year->value() > 2000) ? m_year->value() : 0;
 
     p->ecuUse       = m_ecuUse->currentText();
-    p->ecuProducer  = m_ecuProducer->text().trimmed();
-    p->ecuType      = m_ecuType->text().trimmed();
+    p->ecuProducer  = m_ecuProducer->currentText().trimmed();
+    p->ecuType      = m_ecuType->currentText().trimmed();
     p->ecuNrProd    = m_ecuNrProd->text().trimmed();
     p->ecuNrEcu     = m_ecuNrEcu->text().trimmed();
     p->ecuSwNumber  = m_ecuSwNum->text().trimmed();

@@ -1,5 +1,23 @@
 #include "mainwindow.h"
 #include "hexcomparedlg.h"
+#include "diffpanel.h"
+#include "savepoints/SavepointManager.h"
+#include "annotations/AnnotationStore.h"
+#include "io/MapListExporter.h"
+#include "edit/FindSimilarMapsDlg.h"
+#include "edit/MapFingerprint.h"
+#include "savepoints/SavepointsPanel.h"
+#include <QDockWidget>
+#include <QScrollBar>
+#ifdef RX14_DEBUG_RPC
+#  include "debug/DebugRpc.h"
+#  include "debug/DebugLog.h"
+#  include "logger.h"
+#  include <QJsonObject>
+#  include <QJsonArray>
+#  include <QPixmap>
+#  include <QDir>
+#endif
 #include "updatechecker.h"
 #include "olsparser.h"
 #include "kpparser.h"
@@ -730,6 +748,84 @@ MainWindow::MainWindow(QWidget *parent)
         for (const auto &entry : ProjectRegistry::instance().entries())
             QFile::remove(entry.path + ".autosave");
     });
+
+    // ── Differences panel (right-side QDockWidget) ─────────────────────────
+    // Compare two open projects byte-by-byte, optionally copy diffs into a
+    // third "target" project.  Toggled by m_actToggleDiff (View menu, Ctrl+D).
+    m_diffPanel = new DiffPanel(this);
+    m_diffDock = new QDockWidget(tr("Differences"), this);
+    m_diffDock->setObjectName("diffDock");
+    m_diffDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    m_diffDock->setFeatures(QDockWidget::DockWidgetMovable
+                            | QDockWidget::DockWidgetClosable
+                            | QDockWidget::DockWidgetFloatable);
+    m_diffDock->setWidget(m_diffPanel);
+    m_diffDock->setMinimumWidth(320);
+    m_diffDock->hide();
+    addDockWidget(Qt::RightDockWidgetArea, m_diffDock);
+
+    if (m_actToggleDiff) {
+        connect(m_actToggleDiff, &QAction::toggled,
+                m_diffDock, &QDockWidget::setVisible);
+        connect(m_diffDock, &QDockWidget::visibilityChanged,
+                m_actToggleDiff, &QAction::setChecked);
+        // First time it's opened, push the current project list so something
+        // is visible immediately.
+        connect(m_diffDock, &QDockWidget::visibilityChanged, this,
+                [this](bool on) {
+            if (!on) return;
+            m_diffPanel->setActiveProject(activeProject());
+            m_diffPanel->setProjects(m_projects);
+            m_diffPanel->setDisplayParams(m_dataSize, m_byteOrder,
+                                          m_displayFmt, m_signed);
+        });
+    }
+    connect(m_diffPanel, &DiffPanel::rowActivated,
+            this, &MainWindow::onDiffRowActivated);
+    connect(m_diffPanel, &DiffPanel::alignmentChanged,
+            this, &MainWindow::onDiffAlignmentChanged);
+    connect(m_diffPanel, &DiffPanel::copyApplied, this,
+            [this](Project *target, int n) {
+        statusBar()->showMessage(
+            tr("Copied %1 word(s) into %2")
+                .arg(n)
+                .arg(target ? target->name : QString()),
+            4000);
+    });
+
+    // ── Tuning Branches dock ──────────────────────────────────────────────
+    // Per-project named savepoints (Ctrl+B).  Manager is owned by
+    // MainWindow but rebound to the active project on every focus change
+    // so the panel always reflects the project the user is editing.
+    m_savepoints      = new SavepointManager(this);
+    m_savepointsPanel = new SavepointsPanel(this);
+    m_savepointsPanel->setManager(m_savepoints);
+
+    m_savepointsDock = new QDockWidget(tr("Tuning Branches"), this);
+    m_savepointsDock->setObjectName("savepointsDock");
+    m_savepointsDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    m_savepointsDock->setFeatures(QDockWidget::DockWidgetMovable
+                                  | QDockWidget::DockWidgetClosable
+                                  | QDockWidget::DockWidgetFloatable);
+    m_savepointsDock->setWidget(m_savepointsPanel);
+    m_savepointsDock->setMinimumWidth(300);
+    m_savepointsDock->hide();
+    addDockWidget(Qt::RightDockWidgetArea, m_savepointsDock);
+
+    if (m_actToggleSavepoints) {
+        connect(m_actToggleSavepoints, &QAction::toggled,
+                m_savepointsDock, &QDockWidget::setVisible);
+        connect(m_savepointsDock, &QDockWidget::visibilityChanged,
+                m_actToggleSavepoints, &QAction::setChecked);
+    }
+
+#ifdef RX14_DEBUG_RPC
+    // ── Debug RPC server ───────────────────────────────────────────────────
+    // localhost-only TCP JSON-line interface for inspecting & driving the UI
+    // from external dev tools.  See src/debug/DebugRpc.h.
+    m_debugRpc = new DebugRpc(this, this);
+    m_debugRpc->start(48714);
+#endif
 }
 
 // ── Language loading ──────────────────────────────────────────────────────────
@@ -1249,6 +1345,8 @@ void MainWindow::buildLeftPanel()
     m_projectTree = new QTreeWidget();
     m_projectTree->setColumnCount(1);
     m_projectTree->setHeaderHidden(true);
+    // Sprint E — multi-select for bulk edit (Ctrl+click / Shift+click).
+    m_projectTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_projectTree->setRootIsDecorated(true);
     m_projectTree->setExpandsOnDoubleClick(false);  // we handle double-click manually
     m_projectTree->setAlternatingRowColors(false);
@@ -1442,8 +1540,48 @@ void MainWindow::buildLeftPanel()
             }
         }
 
+        // Sprint E — bulk edit when 2+ map rows are selected
+        QAction *actBulkEdit = nullptr;
+        QVector<MapInfo> bulkSelection;
+        {
+            for (auto *it : m_projectTree->selectedItems()) {
+                auto v = it->data(0, Qt::UserRole + 2);
+                if (v.isValid()) bulkSelection.append(v.value<MapInfo>());
+            }
+            if (bulkSelection.size() >= 2) {
+                menu.addSeparator();
+                actBulkEdit = menu.addAction(
+                    tr("Bulk edit %1 maps…").arg(bulkSelection.size()));
+            }
+        }
+
+        // Sprint F — Find similar maps when exactly one map row is selected
+        QAction *actFindSimilar = nullptr;
+        MapInfo  findSimilarRef;
+        if (bulkSelection.size() == 1
+            || (item && item->data(0, Qt::UserRole + 2).isValid()
+                && bulkSelection.size() <= 1)) {
+            if (item) {
+                auto v = item->data(0, Qt::UserRole + 2);
+                if (v.isValid()) {
+                    findSimilarRef = v.value<MapInfo>();
+                    menu.addSeparator();
+                    actFindSimilar = menu.addAction(tr("Find similar maps…"));
+                }
+            }
+        }
+
         QAction *chosen = menu.exec(m_projectTree->mapToGlobal(pos));
         if (!chosen) return;
+
+        if (actBulkEdit && chosen == actBulkEdit) {
+            runBulkEdit(bulkSelection);
+            return;
+        }
+        if (actFindSimilar && chosen == actFindSimilar) {
+            runFindSimilar(findSimilarRef);
+            return;
+        }
 
         // ── Handle rename ──────────────────────────────────────────────
         if (actRename && chosen == actRename && renameTarget) {
@@ -1796,7 +1934,7 @@ void MainWindow::buildActions()
     m_actCompareHex      = new QAction(tr("Compare Hex…"),                this);
     m_actImportMapPack   = new QAction(tr("Import Map Pack…"),           this);
     m_actPatchEditor     = new QAction(tr("Open Patch Script…"),         this);
-    m_actDtcManager      = new QAction(tr("DTC Manager…"),               this);
+    m_actDtcManager      = new QAction(tr("DTC Manager (A2L)…"),         this);
     m_actAIFunctions     = new QAction(tr("AI Functions…"), this);
     m_actVerifyChecksum  = new QAction(tr("Verify Checksum"),   this);
     m_actCorrectChecksum = new QAction(tr("Correct Checksum…"), this);
@@ -1934,6 +2072,106 @@ void MainWindow::buildActions()
     m_actHeightColors->setChecked(true);
     m_actHeightColors->setToolTip(tr("Turn height colours on / off"));
 
+    // Differences panel toggle (View → Differences, Ctrl+D)
+    m_actToggleDiff = new QAction(tr("Differences"), this);
+    m_actToggleDiff->setCheckable(true);
+    m_actToggleDiff->setShortcut(QKeySequence("Ctrl+D"));
+    m_actToggleDiff->setToolTip(
+        tr("Show/hide the Differences panel (compare two projects byte-by-byte)"));
+
+    // Differences-to-Original overlay (Sprint B) — Ctrl+Shift+O.
+    // Lights up every byte that differs from Project::originalData in
+    // hex / waveform / 3D simultaneously.
+    m_actDiffOriginal = new QAction(tr("Differences vs Original"), this);
+    m_actDiffOriginal->setCheckable(true);
+    m_actDiffOriginal->setShortcut(QKeySequence("Ctrl+Shift+O"));
+    m_actDiffOriginal->setToolTip(
+        tr("Highlight every cell that differs from the project's original ROM"));
+    m_showOriginalDiff = QSettings("CT14", "romHEX14")
+                            .value("view/showOriginalDiff", false).toBool();
+    m_actDiffOriginal->setChecked(m_showOriginalDiff);
+    connect(m_actDiffOriginal, &QAction::toggled,
+            this, &MainWindow::onToggleDiffOriginal);
+
+    // Annotations (Sprint C) — comments + markers at ROM offsets.
+    m_actInsertComment = new QAction(tr("Insert comment…"), this);
+    m_actInsertComment->setShortcut(QKeySequence("Shift+Return"));
+    m_actInsertComment->setToolTip(
+        tr("Attach a free-text comment to the current ROM offset"));
+    connect(m_actInsertComment, &QAction::triggered,
+            this, &MainWindow::onInsertComment);
+
+    m_actInsertMarker = new QAction(tr("Insert marker"), this);
+    m_actInsertMarker->setShortcut(QKeySequence("Ctrl+F5"));
+    m_actInsertMarker->setToolTip(
+        tr("Pin a quick marker at the current ROM offset (no text)"));
+    connect(m_actInsertMarker, &QAction::triggered,
+            this, &MainWindow::onInsertMarker);
+
+    m_actDeleteComment = new QAction(tr("Delete annotation here"), this);
+    m_actDeleteComment->setToolTip(
+        tr("Remove the comment / marker at the current ROM offset"));
+    connect(m_actDeleteComment, &QAction::triggered,
+            this, &MainWindow::onDeleteComment);
+
+    m_actNextMarker = new QAction(tr("Next marker"), this);
+    m_actNextMarker->setShortcut(QKeySequence(Qt::Key_F5));
+    connect(m_actNextMarker, &QAction::triggered,
+            this, [this]() { onJumpMarker(true); });
+
+    m_actPrevMarker = new QAction(tr("Previous marker"), this);
+    m_actPrevMarker->setShortcut(QKeySequence("Shift+F5"));
+    connect(m_actPrevMarker, &QAction::triggered,
+            this, [this]() { onJumpMarker(false); });
+
+    // Tuning Branches / Savepoints (View → Tuning Branches, Ctrl+B)
+    m_actToggleSavepoints = new QAction(tr("Tuning Branches"), this);
+    m_actToggleSavepoints->setCheckable(true);
+    m_actToggleSavepoints->setShortcut(QKeySequence("Ctrl+B"));
+    m_actToggleSavepoints->setToolTip(
+        tr("Named snapshots of the active project — save current state, "
+           "switch back, compare trials"));
+
+    // ── Selection / map editing operations (Sprint A) ──────────────────
+    m_actValPlus1     = new QAction(tr("Value +1"), this);
+    m_actValPlus1->setShortcut(QKeySequence(Qt::Key_Plus));
+    m_actValMinus1    = new QAction(tr("Value −1"), this);
+    m_actValMinus1->setShortcut(QKeySequence(Qt::Key_Minus));
+    m_actChangeAbs    = new QAction(tr("Change absolute…"), this);
+    m_actChangeAbs->setShortcut(QKeySequence(Qt::Key_Equal));
+    m_actChangeRel    = new QAction(tr("Change relative…"), this);
+    m_actChangeRel->setShortcut(QKeySequence(Qt::Key_Percent));
+    m_actChangeSlider = new QAction(tr("Change by slider…"), this);
+    m_actRoundLimit   = new QAction(tr("Round / limit values…"), this);
+    m_actOriginalVal  = new QAction(tr("Restore original value"), this);
+    m_actOriginalVal->setShortcut(QKeySequence(Qt::Key_F11));
+    m_actInterpolate  = new QAction(tr("Interpolate"), this);
+    m_actSmooth       = new QAction(tr("Smooth"), this);
+    m_actFlatten      = new QAction(tr("Flatten (set to mean)"), this);
+    m_actAgain        = new QAction(tr("Again"), this);
+    m_actAgain->setShortcut(QKeySequence(Qt::Key_F4));
+    m_actAgain->setToolTip(
+        tr("Re-apply the last edit operation on the current selection"));
+
+    auto wireEdit = [this](QAction *a, EditOp op) {
+        connect(a, &QAction::triggered, this, [this, op]() {
+            onEditOpFromMenu(op);
+        });
+    };
+    wireEdit(m_actValPlus1,     EditOp::ValuePlus1);
+    wireEdit(m_actValMinus1,    EditOp::ValueMinus1);
+    wireEdit(m_actChangeAbs,    EditOp::Absolute);
+    wireEdit(m_actChangeRel,    EditOp::Relative);
+    wireEdit(m_actChangeSlider, EditOp::Slider);
+    wireEdit(m_actRoundLimit,   EditOp::RoundLimit);
+    wireEdit(m_actOriginalVal,  EditOp::Original);
+    wireEdit(m_actInterpolate,  EditOp::Interpolate);
+    wireEdit(m_actSmooth,       EditOp::Smooth);
+    wireEdit(m_actFlatten,      EditOp::Flatten);
+    connect(m_actAgain, &QAction::triggered, this, [this]() {
+        if (m_haveLastEdit) applyEditOp(m_lastEditOp, m_lastEditParams);
+    });
+
     // Connect slots
     connect(m_actProjectMgr, &QAction::triggered, this, &MainWindow::actProjectManager);
     connect(m_actNew,        &QAction::triggered, this, &MainWindow::actNewProject);
@@ -1960,19 +2198,16 @@ void MainWindow::buildActions()
             QMessageBox::information(this, tr("No project"), tr("Open a project with A2L maps first."));
             return;
         }
-        // Check if project has any DFC maps
+        // Check if project has any DFC maps (A2L-driven path)
         bool hasDfc = false;
         for (const auto &m : proj->maps) {
             if (m.name.contains("DFC_CtlMsk")) { hasDfc = true; break; }
         }
         if (!hasDfc) {
             QMessageBox::information(this, tr("No DTCs Found"),
-                tr("No DFC_CtlMsk maps found.\nDTC management requires an A2L file with Bosch DFC definitions."));
-            return;
-        }
-        if (!ApiClient::instance().isLoggedIn() || !ApiClient::instance().hasModule(QStringLiteral("dtc"))) {
-            QMessageBox::information(this, tr("DTC Manager"),
-                tr("DTC management requires a Pro account.\nPurchase the DTC module from romhex14.com to unlock this feature."));
+                tr("No DFC_CtlMsk maps found in this project.\n"
+                   "DTC Manager (A2L) needs DFC definitions from an imported A2L file.\n\n"
+                   "Use “Disable DTC && Features…” for ROM-based (signature-driven) detection."));
             return;
         }
         auto *dlg = new DtcDialog(proj, this);
@@ -2012,28 +2247,43 @@ void MainWindow::buildActions()
             auto *pv = qobject_cast<ProjectView *>(sub->widget());
             if (!pv) continue;
             auto *ww = pv->waveformWidget();
+            auto *hw = pv->hexWidget();
             if (on) {
                 connect(ww, &WaveformWidget::scrollSynced, this, &MainWindow::onWaveSyncScroll,
                         Qt::UniqueConnection);
+                connect(ww, &WaveformWidget::zoomSynced, this, &MainWindow::onWaveSyncZoom,
+                        Qt::UniqueConnection);
+                if (hw) connect(hw, &HexWidget::scrollSynced, this, &MainWindow::onHexSyncScroll,
+                                Qt::UniqueConnection);
                 connect(pv, &ProjectView::viewSwitched, this, &MainWindow::onSyncViewSwitch,
                         Qt::UniqueConnection);
             } else {
                 disconnect(ww, &WaveformWidget::scrollSynced, this, &MainWindow::onWaveSyncScroll);
+                disconnect(ww, &WaveformWidget::zoomSynced,   this, &MainWindow::onWaveSyncZoom);
+                if (hw) disconnect(hw, &HexWidget::scrollSynced, this, &MainWindow::onHexSyncScroll);
                 disconnect(pv, &ProjectView::viewSwitched,    this, &MainWindow::onSyncViewSwitch);
             }
         }
-        // When turning sync ON, snap all non-active waveforms to the active project's scroll
+        // When turning sync ON, snap all non-active waveforms + hex views
+        // to the active project's scroll position.
         if (on) {
             auto *av = activeView();
             if (av) {
                 auto *activeWW = av->waveformWidget();
-                int offset = activeWW->scrollOffset();
+                auto *activeHW = av->hexWidget();
+                const int waveOff = activeWW ? activeWW->scrollOffset() : 0;
+                const int hexOff  = activeHW
+                    ? activeHW->verticalScrollBar()->value() * activeHW->bytesPerRow()
+                    : 0;
                 for (auto *sub : m_mdi->subWindowList()) {
                     auto *pv = qobject_cast<ProjectView *>(sub->widget());
                     if (!pv) continue;
                     auto *ww = pv->waveformWidget();
-                    if (ww != activeWW)
-                        ww->syncScrollTo(offset);
+                    auto *hw = pv->hexWidget();
+                    if (activeWW && ww && ww != activeWW)
+                        ww->syncScrollTo(waveOff);
+                    if (activeHW && hw && hw != activeHW)
+                        hw->syncScrollTo(hexOff);
                 }
             }
         }
@@ -2094,7 +2344,7 @@ void MainWindow::retranslateUi()
     m_actCompareHex->setText(tr("Compare Hex…"));
     m_actImportMapPack->setText(tr("Import Map Pack…"));
     m_actPatchEditor->setText(tr("Open Patch Script…"));
-    m_actDtcManager->setText(tr("DTC Manager…"));
+    m_actDtcManager->setText(tr("DTC Manager (A2L)…"));
     m_actAIFunctions->setText(tr("AI Functions…"));
     m_actVerifyChecksum->setText(tr("Verify Checksum"));
     m_actCorrectChecksum->setText(tr("Correct Checksum…"));
@@ -2167,12 +2417,18 @@ void MainWindow::retranslateUi()
     m_menuProject->addSeparator();
     m_menuProject->addAction(m_actImportMapPack);
     m_menuProject->addAction(m_actPatchEditor);
-#ifdef RX14_PRO_BUILD
     m_menuProject->addAction(m_actDtcManager);
+#ifdef RX14_PRO_BUILD
     m_menuProject->addAction(m_actAIFunctions);
     m_menuProject->addAction(m_actVerifyChecksum);
     m_menuProject->addAction(m_actCorrectChecksum);
 #endif
+    m_menuProject->addSeparator();
+    // Sprint D — map list export
+    m_menuProject->addAction(tr("Export map list as &CSV…"),
+                             this, [this]() { exportMapListCsv(); });
+    m_menuProject->addAction(tr("Export map list as &JSON…"),
+                             this, [this]() { exportMapListJson(); });
     m_menuProject->addSeparator();
     m_menuProject->addAction(m_actClose);
     m_menuProject->addSeparator();
@@ -2197,6 +2453,12 @@ void MainWindow::retranslateUi()
         if (auto *v = activeView()) v->switchView(2); });
     m_menuView->addSeparator();
     m_menuView->addAction(m_actToggleAI);
+    if (m_actToggleDiff)
+        m_menuView->addAction(m_actToggleDiff);
+    if (m_actToggleSavepoints)
+        m_menuView->addAction(m_actToggleSavepoints);
+    if (m_actDiffOriginal)
+        m_menuView->addAction(m_actDiffOriginal);
     m_menuView->addSeparator();
     m_menuView->addAction(tr("Zoom &In"), QKeySequence::ZoomIn, this, [this]() {
         if (m_fontSize < 24 && m_fontSizeLabel) {
@@ -2222,6 +2484,21 @@ void MainWindow::retranslateUi()
     m_menuSel->addAction(m_actSyncCursors);
     m_menuSel->addSeparator();
     m_menuSel->addAction(m_actCompare);
+    m_menuSel->addSeparator();
+    // Sprint A — map editing operations.  All entries operate on the
+    // active view's selection (waveform / hex) or whole-map (3D).
+    m_menuSel->addAction(m_actValPlus1);
+    m_menuSel->addAction(m_actValMinus1);
+    m_menuSel->addAction(m_actChangeAbs);
+    m_menuSel->addAction(m_actChangeRel);
+    m_menuSel->addAction(m_actChangeSlider);
+    m_menuSel->addAction(m_actRoundLimit);
+    m_menuSel->addAction(m_actOriginalVal);
+    m_menuSel->addAction(m_actInterpolate);
+    m_menuSel->addAction(m_actSmooth);
+    m_menuSel->addAction(m_actFlatten);
+    m_menuSel->addSeparator();
+    m_menuSel->addAction(m_actAgain);
 
     // ── Find menu ─────────────────────────────────────────────────────
     m_menuFind->clear();
@@ -2237,6 +2514,14 @@ void MainWindow::retranslateUi()
                         ? s.toUInt(nullptr, 16) : s.toUInt(nullptr, 0);
         v->goToAddress(addr);
     });
+
+    // Sprint C — annotations / markers
+    m_menuFind->addSeparator();
+    m_menuFind->addAction(m_actInsertComment);
+    m_menuFind->addAction(m_actInsertMarker);
+    m_menuFind->addAction(m_actDeleteComment);
+    m_menuFind->addAction(m_actNextMarker);
+    m_menuFind->addAction(m_actPrevMarker);
 
     // ── Miscellaneous menu ────────────────────────────────────────────
     m_menuMisc->clear();
@@ -2665,6 +2950,13 @@ QMdiSubWindow *MainWindow::openProject(Project *project)
     connect(project, &Project::versionsChanged,   this, &MainWindow::scheduleAutoSave, Qt::UniqueConnection);
     connect(project, &Project::linkedRomsChanged, this, &MainWindow::scheduleAutoSave, Qt::UniqueConnection);
 
+    // Differences panel: re-run the diff scan whenever this project's data
+    // changes.  Must be a member function so Qt::UniqueConnection can verify
+    // duplicate detection — lambdas trigger an assertion failure here.
+    connect(project, &Project::dataChanged,
+            this, &MainWindow::onProjectDataChangedForDiff,
+            Qt::UniqueConnection);
+
     // Linked-ROM child → parent sync. When this project is a linked ROM whose
     // parent is still alive in m_projects, mirror every byte change back into
     // the parent's linkedRoms[idx].data. This is what makes "Save parent
@@ -2692,9 +2984,34 @@ QMdiSubWindow *MainWindow::openProject(Project *project)
     if (m_actSyncCursors && m_actSyncCursors->isChecked()) {
         connect(view->waveformWidget(), &WaveformWidget::scrollSynced,
                 this, &MainWindow::onWaveSyncScroll, Qt::UniqueConnection);
+        connect(view->waveformWidget(), &WaveformWidget::zoomSynced,
+                this, &MainWindow::onWaveSyncZoom, Qt::UniqueConnection);
+        if (auto *hw = view->hexWidget())
+            connect(hw, &HexWidget::scrollSynced,
+                    this, &MainWindow::onHexSyncScroll, Qt::UniqueConnection);
         connect(view, &ProjectView::viewSwitched,
                 this, &MainWindow::onSyncViewSwitch, Qt::UniqueConnection);
     }
+
+    // Hex / 3D view right-click "Edit ..." submenus emit editOpRequested(int)
+    // — route through the same dispatcher used by the global Selection
+    // menu so all paths converge on one applyEditOp() / one undo stack.
+    // NOTE: must be a member-function slot, not a lambda.  Qt::UniqueConnection
+    // requires it (qobject.h:263) and a lambda there crashes with
+    // QtFatalMsg.
+    if (auto *hw = view->hexWidget()) {
+        connect(hw, &HexWidget::editOpRequested,
+                this, &MainWindow::onEditOpRequestedFromView,
+                Qt::UniqueConnection);
+    }
+    if (auto *m3 = view->map3dWidget()) {
+        connect(m3, &Map3DWidget::editOpRequested,
+                this, &MainWindow::onEditOpRequestedFromView,
+                Qt::UniqueConnection);
+    }
+
+    // Inherit current "Diff vs Original" overlay state — Sprint B.
+    view->setShowOriginalDiffOverlay(m_showOriginalDiff);
 
     refreshProjectTree();
     refreshRecentMapsStrip();
@@ -2801,6 +3118,8 @@ void MainWindow::broadcastAvailableProjects()
         if (pv)
             pv->setAvailableProjects(m_projects);
     }
+    if (m_diffPanel)
+        m_diffPanel->setProjects(m_projects);
 }
 
 void MainWindow::loadROMIntoProject(Project *project, const QString &romPath)
@@ -4811,20 +5130,45 @@ void MainWindow::updateCentralPage()
 
 void MainWindow::refreshProjectTreeNow()
 {
-    // Save expanded state before clearing
+    // ── Save expand-state for EVERY level of the tree, not just two
+    // levels.  Old code captured only top-level groups + their direct
+    // children, so deeper A2L sub-groups (Engine → Fuel → Injection → …)
+    // collapsed on every dataChanged() emit.  We now key by the full path
+    // ("Project / My maps / Engine / Fuel" etc.) so every previously open
+    // node is restored exactly where it was.
+    //
+    // Backwards-compatibility: still emit the legacy sentinel-keys so the
+    // existing `expandedGroups.contains("__linkedroms__")` and
+    // `contains(g.name)` checks below keep working.
     QSet<QString> expandedGroups;
+    QSet<QString> expandedPaths;
+    QString       currentPath;          // re-select this item after rebuild
+
+    auto pathOf = [](QTreeWidgetItem *it) {
+        QStringList segs;
+        for (auto *p = it; p; p = p->parent())
+            segs.prepend(p->text(0));
+        return segs.join(QStringLiteral(" / "));
+    };
+    std::function<void(QTreeWidgetItem*)> collectExpanded;
+    collectExpanded = [&](QTreeWidgetItem *it) {
+        if (it->isExpanded())
+            expandedPaths.insert(pathOf(it));
+        for (int k = 0; k < it->childCount(); ++k)
+            collectExpanded(it->child(k));
+    };
     for (int i = 0; i < m_projectTree->topLevelItemCount(); ++i) {
         auto *proj = m_projectTree->topLevelItem(i);
+        collectExpanded(proj);
+        // Legacy keys
         for (int j = 0; j < proj->childCount(); ++j) {
             auto *child = proj->child(j);
             if (!child->isExpanded()) continue;
             const QString txt = child->text(0);
-            // Linked ROMs / Versions sections use sentinel keys
             if (txt.startsWith(tr("Linked ROMs")))
                 expandedGroups.insert("__linkedroms__");
             else if (txt.startsWith(tr("Versions")))
                 expandedGroups.insert("__versions__");
-            // Map sub-groups (children of "My maps")
             for (int k = 0; k < child->childCount(); ++k) {
                 auto *grp = child->child(k);
                 if (grp->isExpanded())
@@ -4832,6 +5176,8 @@ void MainWindow::refreshProjectTreeNow()
             }
         }
     }
+    if (auto *cur = m_projectTree->currentItem())
+        currentPath = pathOf(cur);
 
     m_projectTree->setUpdatesEnabled(false);
     m_projectTree->clear();
@@ -4862,9 +5208,13 @@ void MainWindow::refreshProjectTreeNow()
                                     && !isLargeProject;
 
         auto addLeaf = [&](QTreeWidgetItem *parentItem, const MapInfo &m) {
-            const bool changed = isLargeProject ? false : mapHasChanges(p, m);
-            const bool starred = isLargeProject ? false
-                                               : p->starredMaps.contains(m.name);
+            // mapHasChanges is a single memcmp on map bytes — keep it
+            // active even on huge projects (6000+ maps × ~256 bytes ≈ 1.5 MB
+            // total memcmp, ~few ms).  Without it, the "modified" highlight
+            // and the filter-modified button silently fail on big OLS-imported
+            // ROMs (the original ~5000-map gate hid this).
+            const bool changed = mapHasChanges(p, m);
+            const bool starred = p->starredMaps.contains(m.name);
             auto *mi = new QTreeWidgetItem(parentItem);
             if      (m.type == "MAP")     mi->setIcon(0, iconMap);
             else if (m.type == "CURVE")   mi->setIcon(0, iconCurve);
@@ -5102,6 +5452,37 @@ void MainWindow::refreshProjectTreeNow()
         potMaps->setForeground(0, QColor("#7d8590"));
         potMaps->setExpanded(false);
         potMaps->setDisabled(true);
+    }
+
+    // ── Restore expand state for every previously-open node + the
+    // previous selection (using the full-path key collected above).
+    {
+        std::function<void(QTreeWidgetItem*)> restore;
+        restore = [&](QTreeWidgetItem *it) {
+            const QString p = pathOf(it);
+            if (expandedPaths.contains(p))
+                it->setExpanded(true);
+            for (int k = 0; k < it->childCount(); ++k)
+                restore(it->child(k));
+        };
+        QTreeWidgetItem *toSelect = nullptr;
+        std::function<QTreeWidgetItem*(QTreeWidgetItem*)> findSelected;
+        findSelected = [&](QTreeWidgetItem *it) -> QTreeWidgetItem* {
+            if (!currentPath.isEmpty() && pathOf(it) == currentPath) return it;
+            for (int k = 0; k < it->childCount(); ++k) {
+                if (auto *r = findSelected(it->child(k))) return r;
+            }
+            return nullptr;
+        };
+        for (int i = 0; i < m_projectTree->topLevelItemCount(); ++i) {
+            auto *top = m_projectTree->topLevelItem(i);
+            restore(top);
+            if (!toSelect) toSelect = findSelected(top);
+        }
+        if (toSelect) {
+            m_projectTree->setCurrentItem(toSelect);
+            m_projectTree->scrollToItem(toSelect, QAbstractItemView::PositionAtCenter);
+        }
     }
 
     m_projectTree->setUpdatesEnabled(true);
@@ -5677,6 +6058,13 @@ void MainWindow::actCompareProjects()
     w1->setGeometry(area.x(),          area.y(), half - 1, area.height());
     w2->setGeometry(area.x() + half + 1, area.y(), area.width() - half - 1, area.height());
     w1->show(); w2->show();
+
+    // Compare implies "I want them moving together" — auto-enable Sync
+    // Cursors so dragging a scrollbar in one window slides the other.
+    // The user can still toggle it off afterwards if they want
+    // independent navigation.
+    if (m_actSyncCursors && !m_actSyncCursors->isChecked())
+        m_actSyncCursors->setChecked(true);
 }
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
@@ -5705,16 +6093,88 @@ void MainWindow::actNextMap()
 
 // ── 2D view scroll sync ────────────────────────────────────────────────────────
 
+// ── Alignment-aware sync helpers ────────────────────────────────────────────
+//
+// When a (A, B [, C]) triple has an alignment map (set via DiffPanel), the
+// Sync Cursors mechanism must scroll each view to its own offset-adjusted
+// position rather than to the raw byte address from the source.  Without
+// this, nudging the offset only changes the diff list — the user wants
+// to physically see B's waveform slide left/right on screen.
+//
+// Identify the "source project" from the sender widget; ask DiffPanel to
+// translate the source-side address into the target-side address; fall
+// back to identity if either project is outside the alignment.
+
+static Project *projectOfWaveform(WaveformWidget *w, QMdiArea *mdi) {
+    if (!w || !mdi) return nullptr;
+    for (auto *sub : mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (pv && pv->waveformWidget() == w) return pv->project();
+    }
+    return nullptr;
+}
+
+static Project *projectOfHex(HexWidget *h, QMdiArea *mdi) {
+    if (!h || !mdi) return nullptr;
+    for (auto *sub : mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (pv && pv->hexWidget() == h) return pv->project();
+    }
+    return nullptr;
+}
+
 void MainWindow::onWaveSyncScroll(int scrollOffset)
 {
-    // Fan out to every other open ProjectView's waveform (skip the sender)
+    auto *source = qobject_cast<WaveformWidget *>(sender());
+    Project *srcProj = projectOfWaveform(source, m_mdi);
+
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (!pv) continue;
+        auto *ww = pv->waveformWidget();
+        if (!ww || ww == source) continue;
+
+        qint64 target = scrollOffset;       // identity fallback
+        if (m_diffPanel && srcProj && pv->project()) {
+            qint64 t = m_diffPanel->translate(srcProj, scrollOffset, pv->project());
+            if (t >= 0) target = t;
+        }
+        ww->syncScrollTo(static_cast<int>(target));
+    }
+}
+
+void MainWindow::onHexSyncScroll(int byteOffset)
+{
+    auto *source = qobject_cast<HexWidget *>(sender());
+    Project *srcProj = projectOfHex(source, m_mdi);
+
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (!pv) continue;
+        auto *hw = pv->hexWidget();
+        if (!hw || hw == source) continue;
+
+        qint64 target = byteOffset;
+        if (m_diffPanel && srcProj && pv->project()) {
+            qint64 t = m_diffPanel->translate(srcProj, byteOffset, pv->project());
+            if (t >= 0) target = t;
+        }
+        hw->syncScrollTo(static_cast<int>(target));
+    }
+}
+
+void MainWindow::onWaveSyncZoom(int sliderValue)
+{
+    // The user dragged one waveform's zoom slider — apply the same zoom
+    // to every other waveform so side-by-side compare keeps both at the
+    // same scale (otherwise the shapes drift apart visually as the user
+    // zooms only one window).
     auto *source = qobject_cast<WaveformWidget *>(sender());
     for (auto *sub : m_mdi->subWindowList()) {
         auto *pv = qobject_cast<ProjectView *>(sub->widget());
         if (!pv) continue;
         auto *ww = pv->waveformWidget();
-        if (ww != source)
-            ww->syncScrollTo(scrollOffset);
+        if (ww && ww != source) ww->syncZoomTo(sliderValue);
     }
 }
 
@@ -5726,6 +6186,144 @@ void MainWindow::onSyncViewSwitch(int index)
         auto *pv = qobject_cast<ProjectView *>(sub->widget());
         if (!pv || pv == source) continue;
         pv->switchView(index);
+    }
+}
+
+void MainWindow::onProjectDataChangedForDiff()
+{
+    if (m_diffPanel && m_diffDock && m_diffDock->isVisible())
+        m_diffPanel->setProjects(m_projects);
+}
+
+// Build a copy of @p src such that result[i] == src[i + delta], padding with
+// zeros where the source is out of range.  Used so a pair of compared ROMs
+// each see the *other* one's bytes lined up in their own coordinate space —
+// this is what brings back the colour overlay on the waveform (the "I can
+// see what changed" feedback) when offsets are non-zero.
+static QByteArray shiftedCopy(const QByteArray &src, qint64 delta, qint64 targetSize)
+{
+    QByteArray r(targetSize, '\0');
+    if (src.isEmpty() || targetSize <= 0) return r;
+    qint64 iStart = qMax<qint64>(0,             -delta);
+    qint64 iEnd   = qMin<qint64>(targetSize,    src.size() - delta);
+    if (iEnd > iStart)
+        std::memcpy(r.data() + iStart,
+                    src.constData() + iStart + delta,
+                    iEnd - iStart);
+    return r;
+}
+
+void MainWindow::onDiffComparisonChanged()
+{
+    // Push project B's bytes (offset-shifted) into A's hex+waveform as
+    // comparisonData, and vice-versa.  This is what lights up the colour
+    // overlays the user expects from a "compare two projects" workflow:
+    // without comparisonData, WaveformWidget falls back to the plain
+    // single-curve render and loses the diff strip / change markers.
+    if (!m_diffPanel || !m_diffDock || !m_diffDock->isVisible()) return;
+    Project *pA = m_diffPanel->projectA();
+    Project *pB = m_diffPanel->projectB();
+    if (!pA || !pB || pA == pB) return;
+
+    const qint64 deltaB = m_diffPanel->globalDeltaToA(pB);
+    if (deltaB == -1) return;   // no global region yet
+
+    // For A's view, comparison = B shifted by deltaB so that B[i+deltaB]
+    // sits at A's index i.  For B's view, comparison = A shifted by
+    // -deltaB.  C is left untouched — its compare-source is the user's
+    // dropdown choice on its own ProjectView.
+    QByteArray cmpForA = shiftedCopy(pB->currentData,  deltaB, pA->currentData.size());
+    QByteArray cmpForB = shiftedCopy(pA->currentData, -deltaB, pB->currentData.size());
+
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (!pv) continue;
+        Project *p = pv->project();
+        if (p == pA) {
+            if (auto *ww = pv->waveformWidget()) ww->setComparisonData(cmpForA);
+            if (auto *hw = pv->hexWidget())      hw->setComparisonData(cmpForA);
+        } else if (p == pB) {
+            if (auto *ww = pv->waveformWidget()) ww->setComparisonData(cmpForB);
+            if (auto *hw = pv->hexWidget())      hw->setComparisonData(cmpForB);
+        }
+    }
+}
+
+void MainWindow::onDiffAlignmentChanged()
+{
+    // Alignment also affects which bytes the comparison overlay should show
+    // — recompute the shifted copies first, *then* slide the views.
+    onDiffComparisonChanged();
+    // Alignment offsets just changed (◀ ▶ nudge, spinbox edit, or Reset).
+    // Re-run sync from A's current waveform/hex position so B and C slide
+    // to their new aligned positions without the user having to scroll
+    // anything.  This is what makes the panel's offset controls *feel*
+    // like sliding the waveform on screen.
+    if (!m_diffPanel) return;
+    Project *pA = m_diffPanel->projectA();
+    if (!pA) return;
+    // Locate A's ProjectView
+    ProjectView *vA = nullptr;
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (pv && pv->project() == pA) { vA = pv; break; }
+    }
+    if (!vA) return;
+
+    // For each other view, translate A's current position via the
+    // alignment map and apply.  Both waveform and hex are kept in sync
+    // independently — whichever the user is looking at, the move will
+    // be visible.
+    auto *waveA = vA->waveformWidget();
+    auto *hexA  = vA->hexWidget();
+    const int waveAOff = waveA ? waveA->scrollOffset() : 0;
+    const int hexAOff  = hexA
+        ? hexA->verticalScrollBar()->value() * hexA->bytesPerRow()
+        : 0;
+
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (!pv || pv == vA) continue;
+        Project *pT = pv->project();
+        if (!pT) continue;
+        if (auto *ww = pv->waveformWidget()) {
+            qint64 t = m_diffPanel->translate(pA, waveAOff, pT);
+            if (t >= 0) ww->syncScrollTo(static_cast<int>(t));
+        }
+        if (auto *hw = pv->hexWidget()) {
+            qint64 t = m_diffPanel->translate(pA, hexAOff, pT);
+            if (t >= 0) hw->syncScrollTo(static_cast<int>(t));
+        }
+    }
+}
+
+void MainWindow::onDiffRowActivated(quint32 addressA)
+{
+    // The diff table's address is in A's coordinate space.  Each sibling
+    // project (B and the optional target C) lives at its own delta
+    // determined by the alignment map, so we translate per-project before
+    // navigating.  Without this step, picking a row would jump A correctly
+    // but land B/C on stale (mis-aligned) data.
+    if (!m_diffPanel) return;
+    Project *pA = m_diffPanel->projectA();
+    Project *pB = m_diffPanel->projectB();
+    Project *pC = m_diffPanel->projectC();
+    const qint64 addrA = static_cast<qint64>(addressA);
+    const qint64 addrB = m_diffPanel->mapAtoB(addrA);
+    const qint64 addrC = m_diffPanel->mapAtoC(addrA);
+
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (!pv) continue;
+        Project *p = pv->project();
+        qint64 target = -1;
+        if      (p == pA) target = addrA;
+        else if (p == pB) target = addrB;
+        else if (p == pC) target = addrC;
+        else continue;
+        if (target < 0) continue;
+        if (auto *hw = pv->hexWidget())      hw->goToAddress(static_cast<quint32>(target));
+        if (auto *ww = pv->waveformWidget()) ww->goToAddress(static_cast<quint32>(target));
     }
 }
 
@@ -5775,6 +6373,10 @@ void MainWindow::applyDisplayFormat()
     for (auto &ov : std::as_const(m_overlays))
         if (ov && ov->isVisible())
             ov->setDisplayParams(m_dataSize, m_byteOrder, m_heightColors);
+
+    if (m_diffPanel)
+        m_diffPanel->setDisplayParams(m_dataSize, m_byteOrder,
+                                      m_displayFmt, m_signed);
 }
 
 // ── Event handlers ─────────────────────────────────────────────────────────────
@@ -5816,6 +6418,13 @@ void MainWindow::onSubWindowActivated(QMdiSubWindow *sw)
         m_aiAssistant->setProject(pv->project());
         m_aiAssistant->setAllProjects(m_projects);
     }
+
+    // Re-bind the savepoint manager to the now-active project so the
+    // Tuning Branches panel always reflects the project the user is
+    // editing.  Sidecar JSON for the previous project is auto-saved
+    // by SavepointManager::attachTo().
+    if (m_savepoints && pv->project())
+        m_savepoints->attachTo(pv->project());
 
     // Apply current toolbar display params and font size to the newly activated view
     applyDisplayFormat();
@@ -6694,9 +7303,20 @@ void MainWindow::actLinkRom()
         return;
     }
     if (proj->maps.isEmpty()) {
-        QMessageBox::warning(this, tr("No maps"),
-            tr("The active project has no A2L maps imported yet.\n"
-               "Import an A2L file first so the linker knows where to search."));
+        QMessageBox::warning(this, tr("No maps in active project"),
+            tr("The currently active project has no map definitions to "
+               "match against.\n\n"
+               "Link ROM to Project works by taking the maps from the "
+               "ACTIVE project (the reference) and locating them in the "
+               "ROM you select.  So the active project must be the one "
+               "WITH metadata — typically the .ols / .kp file, or a "
+               "project that already has an A2L imported.\n\n"
+               "Workflow:\n"
+               "  1. Open the reference .ols / .kp / A2L project first "
+               "(it provides the map names, addresses, scaling).\n"
+               "  2. Make sure that project is the active one.\n"
+               "  3. Then Project → Link ROM to Project… and pick the "
+               "raw .bin you want to map onto it."));
         return;
     }
 
@@ -7408,3 +8028,1033 @@ void MainWindow::actShowCommandPalette()
     m_cmdPalette->raise();
     m_cmdPalette->activateWindow();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Selection / map editing dispatcher (Sprint A)
+//
+//  All edit operations funnel through here.  The dispatcher's job:
+//    1. Resolve the active view's selection (waveform or hex)
+//    2. Find that view's WaveformEditor (single per ProjectView, owns
+//       the undo stack the user expects Ctrl+Z to drive)
+//    3. Translate (op, params) into the right WaveformEditor method call
+//    4. Cache (op, params) for F4 "Again"
+//
+//  3D view: no per-cell selection, so the operation runs over the entire
+//  current map's byte range.  Hex view: HexWidget has its own selection
+//  mechanism (selStart()/selEnd()) — we read those bytes and feed them
+//  to the same WaveformEditor.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#include "edit/SliderEditDlg.h"
+#include "waveformeditor.h"
+
+namespace {
+
+// Resolve (start, end) byte range from the active ProjectView.  Priority:
+// waveform selection > hex selection > whole-map range when 3D view is
+// active and a map is loaded.  Returns false if nothing actionable.
+bool resolveActiveRange(MainWindow * /*mw*/, ProjectView *pv,
+                        int *outStart, int *outEnd, QString *outWhy)
+{
+    if (!pv) { *outWhy = QObject::tr("No active project view."); return false; }
+
+    if (auto *ww = pv->waveformWidget(); ww && ww->hasSelection()) {
+        *outStart = static_cast<int>(ww->selectionStart());
+        *outEnd   = static_cast<int>(ww->selectionEnd()) + 1; // inclusive → exclusive
+        return *outEnd > *outStart;
+    }
+    if (auto *hw = pv->hexWidget(); hw && hw->hasSelection()) {
+        *outStart = hw->selStart();
+        *outEnd   = hw->selEnd() + 1;
+        return *outEnd > *outStart;
+    }
+    // Fall back to "whole currently-shown map".  3D view has no per-cell
+    // selection, so right-clicking it should operate on the entire map.
+    // We also accept this path from waveform/hex when no selection has
+    // been drawn — it's "do this to the whole map" semantics.
+    const MapInfo &m = pv->selectedMap();
+    if (m.length > 0) {
+        *outStart = static_cast<int>(m.address);
+        *outEnd   = static_cast<int>(m.address + m.length);
+        return *outEnd > *outStart;
+    }
+    *outWhy = QObject::tr("Select a map (or drag a range in the waveform / "
+                          "hex view) first.");
+    return false;
+}
+
+} // namespace
+
+void MainWindow::onEditOpRequestedFromView(int code)
+{
+    onEditOpFromMenu(static_cast<EditOp>(code));
+}
+
+void MainWindow::onToggleDiffOriginal(bool on)
+{
+    m_showOriginalDiff = on;
+    QSettings("CT14", "romHEX14").setValue("view/showOriginalDiff", on);
+    // Propagate to every open ProjectView so hex / waveform / 3D each
+    // pick up the flag and repaint.
+    for (auto *sub : m_mdi->subWindowList()) {
+        auto *pv = qobject_cast<ProjectView *>(sub->widget());
+        if (!pv) continue;
+        pv->setShowOriginalDiffOverlay(on);
+    }
+}
+
+// ── Sprint C: annotation slots ─────────────────────────────────────────────
+
+MainWindow::AnnoCtx MainWindow::resolveAnnoCtx()
+{
+    AnnoCtx c;
+    auto *v = activeView();
+    if (m_mdi) {
+        const auto subs = m_mdi->subWindowList();
+        // If the active view (or first if no active) has no annotations
+        // but another subwindow does, prefer that one — it is what the
+        // user just edited.  Also covers the unfocused-RPC case where
+        // activeView() is null.
+        auto hasAnnos = [](ProjectView *pv) {
+            return pv && pv->project()
+                   && !pv->project()->annotations()->all().isEmpty();
+        };
+        if (!hasAnnos(v)) {
+            for (auto *sw : subs) {
+                auto *pv = qobject_cast<ProjectView *>(sw->widget());
+                if (hasAnnos(pv)) { v = pv; break; }
+            }
+        }
+        // Final fallback: first ProjectView so F5 still works on a
+        // project with no annotations yet.
+        if (!v) {
+            for (auto *sw : subs) {
+                if (auto *pv = qobject_cast<ProjectView *>(sw->widget())) {
+                    v = pv; break;
+                }
+            }
+        }
+    }
+    if (!v || !v->project()) return c;
+    c.view    = v;
+    c.project = v->project();
+    c.store   = c.project->annotations();
+    if (!c.store) return c;
+
+    // Priority: hex selection start → hex caret → waveform selection start → 0
+    if (v->hexWidget()->hasSelection())
+        c.offset = v->hexWidget()->selStart();
+    else if (v->hexWidget()->currentOffset() >= 0)
+        c.offset = v->hexWidget()->currentOffset();
+    else if (v->waveformWidget()->hasSelection())
+        c.offset = static_cast<qint64>(v->waveformWidget()->selectionStart());
+    else
+        c.offset = 0;
+    if (c.offset < 0) c.offset = 0;
+    c.ok = true;
+    return c;
+}
+
+void MainWindow::onInsertComment()
+{
+    auto ctx = resolveAnnoCtx();
+    if (!ctx.ok) {
+        statusBar()->showMessage(tr("Open a project first."), 4000);
+        return;
+    }
+    bool ok = false;
+    const QString text = QInputDialog::getMultiLineText(
+        this, tr("Insert comment"),
+        tr("Comment for offset 0x%1:")
+            .arg(ctx.offset, 8, 16, QChar('0')).toUpper(),
+        {}, &ok);
+    if (!ok || text.isEmpty()) return;
+    qint64 length = 1;
+    if (ctx.view && ctx.view->hexWidget()->hasSelection())
+        length = qMax(1, ctx.view->hexWidget()->selEnd()
+                            - ctx.view->hexWidget()->selStart() + 1);
+    ctx.store->add(ctx.offset, text, length);
+    statusBar()->showMessage(
+        tr("Comment added at 0x%1").arg(ctx.offset, 8, 16, QChar('0')).toUpper(),
+        4000);
+}
+
+void MainWindow::onInsertMarker()
+{
+    auto ctx = resolveAnnoCtx();
+    if (!ctx.ok) {
+        statusBar()->showMessage(tr("Open a project first."), 4000);
+        return;
+    }
+    ctx.store->add(ctx.offset, QString(), 1);
+    statusBar()->showMessage(
+        tr("Marker added at 0x%1").arg(ctx.offset, 8, 16, QChar('0')).toUpper(),
+        4000);
+}
+
+void MainWindow::onDeleteComment()
+{
+    auto ctx = resolveAnnoCtx();
+    if (!ctx.ok) return;
+    if (!ctx.store->removeAt(ctx.offset)) {
+        for (const Annotation &a : ctx.store->all()) {
+            if (ctx.offset >= a.addr && ctx.offset < a.addr + a.length) {
+                ctx.store->removeAt(a.addr);
+                break;
+            }
+        }
+    }
+}
+
+void MainWindow::exportMapListCsv()
+{
+    auto *p = activeProject();
+    if (!p || p->maps.isEmpty()) {
+        QMessageBox::information(this, tr("Export map list"),
+            tr("Open a project with at least one map first."));
+        return;
+    }
+    const QString suggested = QDir::homePath() + "/" + p->displayName() + ".csv";
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export map list as CSV"), suggested,
+        tr("CSV (*.csv)"));
+    if (path.isEmpty()) return;
+    QString err;
+    if (!MapListExporter::toCsv(*p, path, &err)) {
+        QMessageBox::warning(this, tr("Export failed"), err);
+        return;
+    }
+    statusBar()->showMessage(tr("Wrote %1 maps to %2")
+                                 .arg(p->maps.size()).arg(path), 6000);
+}
+
+void MainWindow::exportMapListJson()
+{
+    auto *p = activeProject();
+    if (!p || p->maps.isEmpty()) {
+        QMessageBox::information(this, tr("Export map list"),
+            tr("Open a project with at least one map first."));
+        return;
+    }
+    const QString suggested = QDir::homePath() + "/" + p->displayName() + ".json";
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export map list as JSON"), suggested,
+        tr("JSON (*.json)"));
+    if (path.isEmpty()) return;
+    QString err;
+    if (!MapListExporter::toJson(*p, path, &err)) {
+        QMessageBox::warning(this, tr("Export failed"), err);
+        return;
+    }
+    statusBar()->showMessage(tr("Wrote %1 maps to %2")
+                                 .arg(p->maps.size()).arg(path), 6000);
+}
+
+void MainWindow::onJumpMarker(bool forward)
+{
+    auto ctx = resolveAnnoCtx();
+    if (!ctx.ok) return;
+    if (ctx.store->all().isEmpty()) {
+        statusBar()->showMessage(tr("No annotations in this project."), 4000);
+        return;
+    }
+    const qint64 next = forward ? ctx.store->nextAfter(ctx.offset)
+                                : ctx.store->prevBefore(ctx.offset);
+    if (next < 0) return;
+    if (ctx.view) ctx.view->goToAddress(static_cast<uint32_t>(next));
+    statusBar()->showMessage(
+        tr("→ 0x%1").arg(next, 8, 16, QChar('0')).toUpper(), 4000);
+}
+
+void MainWindow::onEditOpFromMenu(EditOp op)
+{
+    EditParams p;
+    bool ok = false;
+
+    switch (op) {
+    case EditOp::ValuePlus1:
+    case EditOp::ValueMinus1:
+    case EditOp::Original:
+    case EditOp::Interpolate:
+    case EditOp::Smooth:
+    case EditOp::Flatten:
+        // No params needed; dispatcher uses the op alone.
+        applyEditOp(op, p);
+        return;
+
+    case EditOp::Absolute: {
+        double v = QInputDialog::getDouble(this, tr("Change absolute"),
+            tr("Set every selected cell to:"), 0.0, -1e9, 1e9, 4, &ok);
+        if (!ok) return;
+        p.value = v;
+        applyEditOp(op, p);
+        return;
+    }
+    case EditOp::Relative: {
+        // Two-mode: enter "+5" → addDelta(5); "*1.05" → scale(1.05);
+        // "5%" → scale(1.05).
+        QString s = QInputDialog::getText(this, tr("Change relative"),
+            tr("Enter delta (e.g. +5, -3, *1.10, +5%):"),
+            QLineEdit::Normal, QStringLiteral("+1"), &ok);
+        if (!ok || s.trimmed().isEmpty()) return;
+        s = s.trimmed();
+        if (s.endsWith('%')) {
+            double pct = s.chopped(1).toDouble(&ok);
+            if (!ok) return;
+            p.isScale = true;
+            p.scaleVal = 1.0 + pct / 100.0;
+        } else if (s.startsWith('*')) {
+            double f = s.mid(1).toDouble(&ok);
+            if (!ok) return;
+            p.isScale = true;
+            p.scaleVal = f;
+        } else {
+            double d = s.toDouble(&ok);
+            if (!ok) return;
+            p.delta = d;
+        }
+        applyEditOp(op, p);
+        return;
+    }
+    case EditOp::Slider: {
+        // The dialog itself drives applyEditOp via setAbsolute previews —
+        // we don't go through dispatcher for it.
+        ProjectView *pv = activeView();
+        int start, end; QString why;
+        if (!resolveActiveRange(this, pv, &start, &end, &why)) {
+            QMessageBox::information(this, tr("Selection"), why);
+            return;
+        }
+        WaveformEditor *ed = pv->waveformWidget()
+                                 ? pv->waveformWidget()->editor()
+                                 : nullptr;
+        if (!ed) return;
+        // Reasonable default range: 0 to 2^(8*cellSize)-1 for unsigned,
+        // ±half for signed.  We don't know per-view cellSize cheaply, so
+        // use a generous range; users can type in spinbox.
+        SliderEditDlg dlg(ed, start, end, ed->readValue(start),
+                          0, 65535, this);
+        if (dlg.exec() == QDialog::Accepted) {
+            p.value  = dlg.committedValue();
+            m_lastEditOp     = EditOp::Slider;
+            m_lastEditParams = p;
+            m_haveLastEdit   = true;
+        }
+        return;
+    }
+    case EditOp::RoundLimit: {
+        // Three-input mini-dialog using QInputDialog series — keeps it
+        // light without a full custom widget.
+        int mult = QInputDialog::getInt(this, tr("Round / limit"),
+            tr("Round to nearest multiple of:"), 1, 0, 1000000, 1, &ok);
+        if (!ok) return;
+        double mn = QInputDialog::getDouble(this, tr("Round / limit"),
+            tr("Minimum allowed value:"), 0.0, -1e9, 1e9, 4, &ok);
+        if (!ok) return;
+        double mx = QInputDialog::getDouble(this, tr("Round / limit"),
+            tr("Maximum allowed value:"), 65535.0, -1e9, 1e9, 4, &ok);
+        if (!ok) return;
+        p.multiple = mult;
+        p.minVal   = mn;
+        p.maxVal   = mx;
+        applyEditOp(op, p);
+        return;
+    }
+    }
+}
+
+void MainWindow::applyEditOp(EditOp op, const EditParams &p)
+{
+    ProjectView *pv = activeView();
+    if (!pv) {
+        QMessageBox::information(this, tr("Selection"),
+            tr("No active project view."));
+        return;
+    }
+    WaveformWidget *ww = pv->waveformWidget();
+    WaveformEditor *ed = ww ? ww->editor() : nullptr;
+    if (!ed) {
+        QMessageBox::information(this, tr("Selection"),
+            tr("Editor not ready for this view."));
+        return;
+    }
+
+    int start = 0, end = 0;
+    QString why;
+    if (!resolveActiveRange(this, pv, &start, &end, &why)) {
+        QMessageBox::information(this, tr("Selection"), why);
+        return;
+    }
+
+    switch (op) {
+    case EditOp::ValuePlus1:   ed->increment(start, end, +1); break;
+    case EditOp::ValueMinus1:  ed->increment(start, end, -1); break;
+    case EditOp::Absolute:     ed->setAbsolute(start, end, p.value); break;
+    case EditOp::Relative:
+        if (p.isScale) ed->scale(start, end, p.scaleVal);
+        else           ed->addDelta(start, end, p.delta);
+        break;
+    case EditOp::Slider:       ed->setAbsolute(start, end, p.value); break;
+    case EditOp::RoundLimit:
+        ed->roundLimit(start, end, p.multiple, p.minVal, p.maxVal);
+        break;
+    case EditOp::Original:     ed->restoreOriginal(start, end); break;
+    case EditOp::Interpolate:  ed->interpolate(start, end); break;
+    case EditOp::Smooth:       ed->smooth(start, end, 3); break;
+    case EditOp::Flatten:      ed->flatten(start, end); break;
+    }
+
+    m_lastEditOp     = op;
+    m_lastEditParams = p;
+    m_haveLastEdit   = true;
+}
+
+// ── Sprint F: find similar maps dispatcher ─────────────────────────────────
+
+void MainWindow::runFindSimilar(const MapInfo &reference)
+{
+    auto *p = activeProject();
+    if (!p || p->maps.size() < 2) {
+        QMessageBox::information(this, tr("Find similar"),
+            tr("Need at least 2 maps in the project to compare."));
+        return;
+    }
+    auto *dlg = new FindSimilarMapsDlg(p, reference, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &FindSimilarMapsDlg::goToRequested,
+            this, [this](const MapInfo &m) {
+                if (auto *v = activeView()) v->goToMap(m);
+            });
+    dlg->show();
+}
+
+// ── Sprint E: bulk edit dispatcher ──────────────────────────────────────────
+
+void MainWindow::runBulkEdit(const QVector<MapInfo> &maps)
+{
+    if (maps.size() < 2) return;
+    ProjectView *pv = activeView();
+    if (!pv) return;
+    WaveformEditor *ed = pv->waveformWidget()
+                             ? pv->waveformWidget()->editor() : nullptr;
+    if (!ed) return;
+
+    // Operation picker (subset of EditOp that makes sense for whole-map ranges)
+    QStringList opNames = {
+        tr("Value +1"), tr("Value −1"),
+        tr("Change absolute"), tr("Change relative (delta)"),
+        tr("Change relative (scale ×)"),
+        tr("Round / limit"),
+        tr("Restore original"),
+    };
+    bool ok = false;
+    QString chosen = QInputDialog::getItem(
+        this, tr("Bulk edit %1 maps").arg(maps.size()),
+        tr("Operation:"), opNames, 0, false, &ok);
+    if (!ok) return;
+    int opIdx = opNames.indexOf(chosen);
+    if (opIdx < 0) return;
+
+    EditParams p;
+    EditOp op = EditOp::Original;
+    switch (opIdx) {
+    case 0: op = EditOp::ValuePlus1;  break;
+    case 1: op = EditOp::ValueMinus1; break;
+    case 2: {
+        op = EditOp::Absolute;
+        p.value = QInputDialog::getDouble(
+            this, tr("Bulk edit"), tr("Absolute value:"),
+            0.0, -1e9, 1e9, 3, &ok);
+        if (!ok) return;
+        break;
+    }
+    case 3: {
+        op = EditOp::Relative;
+        p.delta = QInputDialog::getDouble(
+            this, tr("Bulk edit"), tr("Add delta (raw):"),
+            0.0, -1e9, 1e9, 3, &ok);
+        if (!ok) return;
+        p.isScale = false;
+        break;
+    }
+    case 4: {
+        op = EditOp::Relative;
+        p.scaleVal = QInputDialog::getDouble(
+            this, tr("Bulk edit"), tr("Scale factor (1.05 = +5%):"),
+            1.0, -1e3, 1e3, 4, &ok);
+        if (!ok) return;
+        p.isScale = true;
+        break;
+    }
+    case 5: {
+        op = EditOp::RoundLimit;
+        p.multiple = QInputDialog::getInt(
+            this, tr("Bulk edit"), tr("Round to multiple of:"),
+            1, 1, 1000000, 1, &ok);
+        if (!ok) return;
+        p.minVal = QInputDialog::getDouble(
+            this, tr("Bulk edit"), tr("Min:"), 0.0, -1e9, 1e9, 3, &ok);
+        if (!ok) return;
+        p.maxVal = QInputDialog::getDouble(
+            this, tr("Bulk edit"), tr("Max:"), 65535.0, -1e9, 1e9, 3, &ok);
+        if (!ok) return;
+        break;
+    }
+    case 6: op = EditOp::Original; break;
+    }
+
+    qint64 totalCells = 0;
+    for (const auto &m : maps) totalCells += m.length;
+    auto reply = QMessageBox::question(
+        this, tr("Bulk edit"),
+        tr("This will modify %1 byte ranges across %2 maps. Proceed?")
+            .arg(totalCells).arg(maps.size()),
+        QMessageBox::Yes | QMessageBox::No);
+    if (reply != QMessageBox::Yes) return;
+
+    for (const MapInfo &m : maps) {
+        const int start = static_cast<int>(m.address);
+        const int end   = static_cast<int>(m.address + m.length);
+        if (start < 0 || end <= start) continue;
+        switch (op) {
+        case EditOp::ValuePlus1:   ed->increment(start, end, +1); break;
+        case EditOp::ValueMinus1:  ed->increment(start, end, -1); break;
+        case EditOp::Absolute:     ed->setAbsolute(start, end, p.value); break;
+        case EditOp::Relative:
+            if (p.isScale) ed->scale(start, end, p.scaleVal);
+            else           ed->addDelta(start, end, p.delta);
+            break;
+        case EditOp::RoundLimit:
+            ed->roundLimit(start, end, p.multiple, p.minVal, p.maxVal);
+            break;
+        case EditOp::Original:     ed->restoreOriginal(start, end); break;
+        default: break;
+        }
+    }
+    statusBar()->showMessage(
+        tr("Bulk edit applied to %1 maps").arg(maps.size()), 6000);
+}
+
+#ifdef RX14_DEBUG_RPC
+// ─────────────────────────────────────────────────────────────────────────────
+//  Debug RPC entry points
+//
+//  Called by DebugRpc on the Qt main thread.  Each method is a thin facade
+//  over private state so the RPC layer doesn't have to grow as new private
+//  fields appear in MainWindow.
+// ─────────────────────────────────────────────────────────────────────────────
+
+QJsonObject MainWindow::debugStateSnapshot() const
+{
+    QJsonObject root;
+
+    QJsonArray projects;
+    for (Project *p : m_projects) {
+        if (!p) continue;
+        QJsonObject pj;
+        pj.insert("path",        p->filePath);
+        pj.insert("title",       p->fullTitle());
+        pj.insert("modified",    p->modified);
+        pj.insert("isLinkedRom", p->isLinkedRom);
+        pj.insert("mapCount",    int(p->maps.size()));
+        pj.insert("dataSize",    int(p->currentData.size()));
+        projects.append(pj);
+    }
+    root.insert("projects", projects);
+
+    QJsonArray subs;
+    if (m_mdi) {
+        const auto list = m_mdi->subWindowList();
+        for (int i = 0; i < list.size(); ++i) {
+            QMdiSubWindow *sw = list[i];
+            if (!sw) continue;
+            auto *pv = qobject_cast<ProjectView *>(sw->widget());
+            QJsonObject sj;
+            sj.insert("index",   i);
+            sj.insert("title",   sw->windowTitle());
+            sj.insert("active",  sw == m_mdi->activeSubWindow());
+            QRect g = sw->geometry();
+            QJsonObject geom;
+            geom.insert("x", g.x()); geom.insert("y", g.y());
+            geom.insert("w", g.width()); geom.insert("h", g.height());
+            sj.insert("geometry", geom);
+            if (pv) {
+                Project *p = pv->project();
+                sj.insert("projectPath", p ? p->filePath : QString());
+                if (auto *hw = pv->hexWidget()) {
+                    QJsonObject hex;
+                    int row = hw->verticalScrollBar()->value();
+                    int rowMax = hw->verticalScrollBar()->maximum();
+                    hex.insert("row",         row);
+                    hex.insert("rowMax",      rowMax);
+                    hex.insert("bytesPerRow", hw->bytesPerRow());
+                    hex.insert("byteOffset",  row * hw->bytesPerRow());
+                    hex.insert("selectedOffset", hw->currentOffset());
+                    sj.insert("hex", hex);
+                }
+                if (auto *ww = pv->waveformWidget()) {
+                    QJsonObject wave;
+                    wave.insert("scrollOffset", ww->scrollOffset());
+                    sj.insert("wave", wave);
+                }
+            }
+            subs.append(sj);
+        }
+    }
+    root.insert("subwindows", subs);
+
+    QJsonObject toggles;
+    toggles.insert("syncCursors",
+                   m_actSyncCursors ? m_actSyncCursors->isChecked() : false);
+    toggles.insert("showDiff",         m_showDiff);
+    toggles.insert("showOriginalDiff", m_showOriginalDiff);
+    toggles.insert("heightColors",     m_heightColors);
+    toggles.insert("dataSize",     m_dataSize);
+    toggles.insert("displayFmt",   m_displayFmt);
+    toggles.insert("byteOrder",
+        m_byteOrder == ByteOrder::LittleEndian ? "LE" : "BE");
+    root.insert("toggles", toggles);
+
+    return root;
+}
+
+bool MainWindow::debugTakeScreenshot(const QString &target,
+                                     QString *outPath, QString *outErr)
+{
+    QWidget *w = nullptr;
+    if (target.isEmpty() || target == "main") {
+        w = this;
+    } else if (target == "active") {
+        w = m_mdi ? m_mdi->activeSubWindow() : nullptr;
+    } else if (target.startsWith("subwindow:")) {
+        bool ok = false;
+        int idx = target.mid(QStringLiteral("subwindow:").size()).toInt(&ok);
+        if (ok && m_mdi) {
+            const auto list = m_mdi->subWindowList();
+            if (idx >= 0 && idx < list.size()) w = list[idx];
+        }
+    }
+    if (!w) {
+        if (outErr) *outErr = QStringLiteral("widget not found for target '%1'")
+                                  .arg(target);
+        return false;
+    }
+
+    const QString dir = QStringLiteral("D:/rx14-debug/screenshots");
+    QDir().mkpath(dir);
+    const QString tag = target.isEmpty() ? QStringLiteral("main")
+                                         : QString(target).replace(':','_');
+    const QString fname = QString("%1_%2.png")
+        .arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss_zzz"))
+        .arg(tag);
+    const QString full = dir + "/" + fname;
+
+    QPixmap pm = w->grab();
+    if (pm.isNull() || !pm.save(full, "PNG")) {
+        if (outErr) *outErr = QStringLiteral("save failed: %1").arg(full);
+        return false;
+    }
+    if (outPath) *outPath = full;
+    qCDebug(catRpc) << "screenshot saved" << full;
+    return true;
+}
+
+bool MainWindow::debugTriggerAction(const QString &name,
+                                    bool *outChecked, QString *outErr)
+{
+    // Map of names → action pointers.  Only sync/window/navigation toggles
+    // are exposed for now — extend as needed.
+    struct Entry { const char *name; QAction *MainWindow::*ptr; };
+    static const Entry table[] = {
+        { "m_actSyncCursors",   &MainWindow::m_actSyncCursors  },
+        { "m_actCompare",       &MainWindow::m_actCompare      },
+        { "m_actTile",          &MainWindow::m_actTile         },
+        { "m_actCascade",       &MainWindow::m_actCascade      },
+        { "m_actPrevMap",       &MainWindow::m_actPrevMap      },
+        { "m_actNextMap",       &MainWindow::m_actNextMap      },
+        { "m_actHome",          &MainWindow::m_actHome         },
+        { "m_actCompareRoms",   &MainWindow::m_actCompareRoms  },
+        { "m_actCompareHex",    &MainWindow::m_actCompareHex   },
+        { "m_actHeightColors",  &MainWindow::m_actHeightColors },
+        { "m_actDifference",    &MainWindow::m_actDifference   },
+        { "m_actToggleDiff",    &MainWindow::m_actToggleDiff   },
+        { "m_actToggleAI",      &MainWindow::m_actToggleAI     },
+        { "m_actDiffOriginal",  &MainWindow::m_actDiffOriginal },
+        { "m_actToggleSavepoints", &MainWindow::m_actToggleSavepoints },
+        { "m_actValPlus1",      &MainWindow::m_actValPlus1     },
+        { "m_actValMinus1",     &MainWindow::m_actValMinus1    },
+        { "m_actChangeAbs",     &MainWindow::m_actChangeAbs    },
+        { "m_actChangeRel",     &MainWindow::m_actChangeRel    },
+        { "m_actOriginalVal",   &MainWindow::m_actOriginalVal  },
+        { "m_actInterpolate",   &MainWindow::m_actInterpolate  },
+        { "m_actAgain",         &MainWindow::m_actAgain        },
+        { "m_actInsertComment", &MainWindow::m_actInsertComment },
+        { "m_actInsertMarker",  &MainWindow::m_actInsertMarker  },
+        { "m_actDeleteComment", &MainWindow::m_actDeleteComment },
+        { "m_actNextMarker",    &MainWindow::m_actNextMarker    },
+        { "m_actPrevMarker",    &MainWindow::m_actPrevMarker    },
+    };
+    for (const auto &e : table) {
+        if (name == QLatin1String(e.name)) {
+            QAction *a = this->*(e.ptr);
+            if (!a) {
+                if (outErr) *outErr = QStringLiteral("action is null: %1").arg(name);
+                return false;
+            }
+            // Toggle if checkable, else trigger.
+            if (a->isCheckable()) a->toggle();
+            else                  a->trigger();
+            if (outChecked) *outChecked = a->isChecked();
+            qCDebug(catRpc) << "triggered" << name
+                            << "checked=" << a->isChecked();
+            return true;
+        }
+    }
+    if (outErr) *outErr = QStringLiteral("unknown action: %1").arg(name);
+    return false;
+}
+
+bool MainWindow::debugSetScroll(const QString &target, int subIdx, int value,
+                                QString *outErr)
+{
+    if (!m_mdi) {
+        if (outErr) *outErr = "no MDI area";
+        return false;
+    }
+    const auto list = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= list.size()) {
+        if (outErr) *outErr = QStringLiteral("sub index out of range: %1")
+                                  .arg(subIdx);
+        return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(list[subIdx]->widget());
+    if (!pv) {
+        if (outErr) *outErr = "subwindow has no ProjectView";
+        return false;
+    }
+    if (target == "hex") {
+        auto *hw = pv->hexWidget();
+        if (!hw) { if (outErr) *outErr = "no hex widget"; return false; }
+        // value is interpreted as a row number — same units as
+        // verticalScrollBar()->value()
+        hw->verticalScrollBar()->setValue(value);
+        qCDebug(catRpc) << "scroll hex sub" << subIdx << "row=" << value;
+        return true;
+    }
+    if (target == "wave") {
+        auto *ww = pv->waveformWidget();
+        if (!ww) { if (outErr) *outErr = "no waveform widget"; return false; }
+        // value is a byte offset — use syncScrollTo which interprets it.
+        ww->syncScrollTo(value);
+        qCDebug(catRpc) << "scroll wave sub" << subIdx << "offset=" << value;
+        return true;
+    }
+    if (outErr) *outErr = QStringLiteral("unknown scroll target: %1").arg(target);
+    return false;
+}
+
+bool MainWindow::debugLoadRom(const QString &romPath, QString *outErr)
+{
+    QFileInfo fi(romPath);
+    if (!fi.exists() || !fi.isReadable()) {
+        if (outErr) *outErr = QStringLiteral("file not readable: %1").arg(romPath);
+        return false;
+    }
+
+    auto *project = new Project(this);
+    project->createdAt = QDateTime::currentDateTime();
+    project->createdBy = qEnvironmentVariable("USERNAME",
+                             qEnvironmentVariable("USER", "Unknown"));
+    loadROMIntoProject(project, romPath);
+
+    if (project->currentData.isEmpty()) {
+        if (outErr) *outErr = QStringLiteral("ROM parse produced no data");
+        delete project;
+        return false;
+    }
+
+    // Skip ProjectPropertiesDialog (modal — would block RPC).  Auto-save
+    // to the standard project dir, register, open MDI subwindow.
+    QString name = project->displayName();
+    if (name.isEmpty()) name = fi.baseName();
+    QString dir = ProjectRegistry::defaultProjectDir();
+    QDir().mkpath(dir);
+    QString savePath = dir + "/" + name + ".rx14proj";
+    if (QFileInfo::exists(savePath)) {
+        // Append timestamp to avoid clobbering existing project under
+        // the same name — important for repeat tests.
+        savePath = dir + "/" + name + "_" +
+                   QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") +
+                   ".rx14proj";
+    }
+    if (project->saveAs(savePath))
+        ProjectRegistry::instance().registerProject(savePath, project);
+    openProject(project);
+    return true;
+}
+
+bool MainWindow::debugApplyEdit(int subIdx, int op, int start, int end,
+                                double value, QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI"; return false; }
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) {
+        if (outErr) *outErr = QStringLiteral("sub index %1 out of range").arg(subIdx);
+        return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv) { if (outErr) *outErr = "no ProjectView"; return false; }
+    auto *ww = pv->waveformWidget();
+    auto *ed = ww ? ww->editor() : nullptr;
+    if (!ed) { if (outErr) *outErr = "no editor"; return false; }
+
+    switch (static_cast<EditOp>(op)) {
+    case EditOp::ValuePlus1:   ed->increment(start, end, +1); break;
+    case EditOp::ValueMinus1:  ed->increment(start, end, -1); break;
+    case EditOp::Absolute:     ed->setAbsolute(start, end, value); break;
+    case EditOp::Relative:     ed->addDelta(start, end, value); break;
+    case EditOp::Original:     ed->restoreOriginal(start, end); break;
+    case EditOp::Interpolate:  ed->interpolate(start, end); break;
+    case EditOp::Smooth:       ed->smooth(start, end, 3); break;
+    case EditOp::Flatten:      ed->flatten(start, end); break;
+    case EditOp::RoundLimit:
+        ed->roundLimit(start, end, 1, 0, value);
+        break;
+    default:
+        if (outErr) *outErr = QStringLiteral("op %1 not supported via RPC").arg(op);
+        return false;
+    }
+    return true;
+}
+
+bool MainWindow::debugAddAnnotation(int subIdx, qint64 addr,
+                                    const QString &text, qint64 length,
+                                    QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI"; return false; }
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) {
+        if (outErr) *outErr = QStringLiteral("sub index out of range: %1").arg(subIdx);
+        return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) {
+        if (outErr) *outErr = "no project"; return false;
+    }
+    auto *store = pv->project()->annotations();
+    if (!store) { if (outErr) *outErr = "no store"; return false; }
+    store->add(addr, text, qMax<qint64>(1, length));
+    return true;
+}
+
+QJsonArray MainWindow::debugAnnotationList(int subIdx) const
+{
+    QJsonArray arr;
+    if (!m_mdi) return arr;
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) return arr;
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) return arr;
+    auto *store = pv->project()->annotations();
+    if (!store) return arr;
+    for (const Annotation &a : store->all()) {
+        QJsonObject o;
+        o.insert("addr",   static_cast<double>(a.addr));
+        o.insert("length", static_cast<double>(a.length));
+        o.insert("text",   a.text);
+        o.insert("isMarker", a.isMarker());
+        arr.append(o);
+    }
+    return arr;
+}
+
+bool MainWindow::debugExportMapList(int subIdx, bool csv,
+                                    const QString &path, QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI"; return false; }
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) {
+        if (outErr) *outErr = "sub idx out of range";
+        return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) {
+        if (outErr) *outErr = "no project"; return false;
+    }
+    return csv ? MapListExporter::toCsv(*pv->project(), path, outErr)
+               : MapListExporter::toJson(*pv->project(), path, outErr);
+}
+
+QJsonArray MainWindow::debugFindSimilar(int subIdx, const QString &refName,
+                                        double threshold) const
+{
+    QJsonArray arr;
+    if (!m_mdi) return arr;
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) return arr;
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) return arr;
+    const Project *p = pv->project();
+    const MapInfo *ref = nullptr;
+    for (const MapInfo &m : p->maps) if (m.name == refName) { ref = &m; break; }
+    if (!ref) return arr;
+    const auto refFp = MapFingerprintEngine::computeFor(p->currentData,
+                                                        *ref, p->byteOrder);
+    if (!refFp.isValid()) return arr;
+    for (const MapInfo &m : p->maps) {
+        if (m.name == refName) continue;
+        const auto fp = MapFingerprintEngine::computeFor(p->currentData,
+                                                         m, p->byteOrder);
+        if (!fp.isValid()) continue;
+        const double s = MapFingerprintEngine::similarity(refFp, fp);
+        if (s >= threshold) {
+            QJsonObject o;
+            o.insert("name", m.name);
+            o.insert("address", QString("0x%1")
+                                    .arg(m.address, 8, 16, QChar('0')).toUpper());
+            o.insert("dims", QString("%1x%2").arg(m.dimensions.x).arg(m.dimensions.y));
+            o.insert("score", s);
+            arr.append(o);
+        }
+    }
+    return arr;
+}
+
+QString MainWindow::debugReadBytes(int subIdx, qint64 addr, int len) const
+{
+    if (!m_mdi) return {};
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) return {};
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) return {};
+    const auto &d = pv->project()->currentData;
+    len = qBound(1, len, 256);
+    if (addr < 0 || addr + len > d.size()) return {};
+    return QString::fromLatin1(d.mid(addr, len).toHex());
+}
+
+bool MainWindow::debugBulkEdit(int subIdx, const QStringList &mapNames,
+                               int op, double v, QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI"; return false; }
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) {
+        if (outErr) *outErr = "sub idx out of range"; return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) { if (outErr) *outErr = "no project"; return false; }
+    auto *ed = pv->waveformWidget() ? pv->waveformWidget()->editor() : nullptr;
+    if (!ed) { if (outErr) *outErr = "no editor"; return false; }
+
+    QHash<QString, const MapInfo *> byName;
+    for (const MapInfo &m : pv->project()->maps) byName.insert(m.name, &m);
+
+    int touched = 0;
+    for (const QString &name : mapNames) {
+        const MapInfo *m = byName.value(name, nullptr);
+        if (!m) continue;
+        const int s = static_cast<int>(m->address);
+        const int e = static_cast<int>(m->address + m->length);
+        if (s < 0 || e <= s) continue;
+        switch (static_cast<EditOp>(op)) {
+        case EditOp::ValuePlus1:   ed->increment(s, e, +1); break;
+        case EditOp::ValueMinus1:  ed->increment(s, e, -1); break;
+        case EditOp::Absolute:     ed->setAbsolute(s, e, v); break;
+        case EditOp::Relative:     ed->addDelta(s, e, v); break;
+        case EditOp::Original:     ed->restoreOriginal(s, e); break;
+        case EditOp::Interpolate:  ed->interpolate(s, e); break;
+        case EditOp::Smooth:       ed->smooth(s, e, 3); break;
+        case EditOp::Flatten:      ed->flatten(s, e); break;
+        default:
+            if (outErr) *outErr = "op not supported in bulk RPC";
+            return false;
+        }
+        ++touched;
+    }
+    if (outErr && touched == 0) *outErr = "no maps matched";
+    return touched > 0;
+}
+
+bool MainWindow::debugUndo(int subIdx, QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI"; return false; }
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) {
+        if (outErr) *outErr = "sub idx out of range"; return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv) { if (outErr) *outErr = "no view"; return false; }
+    auto *ed = pv->waveformWidget() ? pv->waveformWidget()->editor() : nullptr;
+    if (!ed) { if (outErr) *outErr = "no editor"; return false; }
+    ed->undo();
+    return true;
+}
+
+bool MainWindow::debugRemoveAnnotation(int subIdx, qint64 addr, QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI"; return false; }
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) {
+        if (outErr) *outErr = "sub idx out of range"; return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) { if (outErr) *outErr = "no project"; return false; }
+    auto *st = pv->project()->annotations();
+    if (!st) { if (outErr) *outErr = "no store"; return false; }
+    return st->removeAt(addr);
+}
+
+bool MainWindow::debugOpenProject(const QString &path, QString *outErr)
+{
+    Project *p = Project::open(path, this);
+    if (!p) {
+        if (outErr) *outErr = QStringLiteral("Project::open failed for %1").arg(path);
+        return false;
+    }
+    m_projects.append(p);
+    openProject(p);
+    return true;
+}
+
+QJsonArray MainWindow::debugMapList(int subIdx, int limit) const
+{
+    QJsonArray arr;
+    if (!m_mdi) return arr;
+    const auto subs = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= subs.size()) return arr;
+    auto *pv = qobject_cast<ProjectView *>(subs[subIdx]->widget());
+    if (!pv || !pv->project()) return arr;
+    const auto &maps = pv->project()->maps;
+    const int n = (limit > 0) ? qMin(limit, int(maps.size())) : maps.size();
+    for (int i = 0; i < n; ++i) {
+        const MapInfo &m = maps[i];
+        QJsonObject o;
+        o.insert("name", m.name);
+        o.insert("address", QString("0x%1")
+                                .arg(m.address, 8, 16, QChar('0')).toUpper());
+        o.insert("addressDec", static_cast<double>(m.address));
+        o.insert("length", m.length);
+        o.insert("dims", QString("%1x%2").arg(m.dimensions.x).arg(m.dimensions.y));
+        o.insert("dataSize", m.dataSize);
+        o.insert("type", m.type);
+        arr.append(o);
+    }
+    return arr;
+}
+
+bool MainWindow::debugSwitchView(int subIdx, int viewIdx, QString *outErr)
+{
+    if (!m_mdi) { if (outErr) *outErr = "no MDI area"; return false; }
+    const auto list = m_mdi->subWindowList();
+    if (subIdx < 0 || subIdx >= list.size()) {
+        if (outErr) *outErr = QStringLiteral("sub index out of range: %1").arg(subIdx);
+        return false;
+    }
+    auto *pv = qobject_cast<ProjectView *>(list[subIdx]->widget());
+    if (!pv) { if (outErr) *outErr = "subwindow has no ProjectView"; return false; }
+    pv->switchView(viewIdx);
+    qCDebug(catRpc) << "switch_view sub" << subIdx << "->" << viewIdx;
+    return true;
+}
+
+#endif // RX14_DEBUG_RPC

@@ -168,6 +168,29 @@ void WaveformEditor::addDelta(int start, int end, double delta)
     emitModified(start, end);
 }
 
+void WaveformEditor::roundLimit(int start, int end, int multiple,
+                                 double minVal, double maxVal)
+{
+    if (!m_data) return;
+    start = alignDown(start);
+    end   = alignUp(end);
+    if (start >= end) return;
+
+    const QByteArray before = snapshot(start, end - start);
+
+    for (int off = start; off < end; off += m_cellSize) {
+        double v = readValue(off);
+        if (multiple > 0)
+            v = std::round(v / multiple) * multiple;
+        v = qBound(minVal, v, maxVal);
+        writeValue(off, v);
+    }
+
+    const QByteArray after = snapshot(start, end - start);
+    pushUndo(start, before, after);
+    emitModified(start, end);
+}
+
 void WaveformEditor::scale(int start, int end, double factor)
 {
     if (!m_data) return;

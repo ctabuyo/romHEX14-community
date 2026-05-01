@@ -8,6 +8,8 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <cmath>
 #include <algorithm>
 
@@ -145,6 +147,19 @@ void Map3DWidget::paintEvent(QPaintEvent *)
     QVector<Face> faces;
     faces.reserve((rows - 1) * (cols - 1));
 
+    // Sprint B helper: does cell (r,c) differ from m_originalData?  Cell
+    // address derives from the map's base + linear index × cellSize.
+    auto cellModified = [&](int r, int c) -> bool {
+        if (!m_showOriginalDiff) return false;
+        if (m_originalData.isEmpty()) return false;
+        const qint64 addr = static_cast<qint64>(m_map.address)
+                          + static_cast<qint64>(r * cols + c) * m_cellSize;
+        if (addr < 0 || addr + m_cellSize > m_data.size()) return false;
+        if (addr + m_cellSize > m_originalData.size())     return false;
+        return std::memcmp(m_data.constData() + addr,
+                           m_originalData.constData() + addr, m_cellSize) != 0;
+    };
+
     for (int r = 0; r < rows - 1; r++) {
         for (int c = 0; c < cols - 1; c++) {
             Face f;
@@ -155,6 +170,8 @@ void Map3DWidget::paintEvent(QPaintEvent *)
 
             f.value = (grid[r][c] + grid[r][c + 1] + grid[r + 1][c + 1] + grid[r + 1][c]) / 4.0;
             f.depth = (f.pts[0].depth + f.pts[1].depth + f.pts[2].depth + f.pts[3].depth) / 4.0;
+            f.modified = cellModified(r, c) || cellModified(r, c + 1)
+                      || cellModified(r + 1, c) || cellModified(r + 1, c + 1);
             faces.append(f);
         }
     }
@@ -179,6 +196,15 @@ void Map3DWidget::paintEvent(QPaintEvent *)
             p.setPen(QPen(wireColor(pct), 1));
         }
         p.drawPolygon(poly);
+
+        // Sprint B — overlay tint on modified faces.  Drawn after the
+        // base face so it composites on top; alpha keeps the underlying
+        // height colour readable.
+        if (face.modified) {
+            p.setBrush(QColor(0xff, 0x55, 0x55, 110));
+            p.setPen(QPen(QColor(0xff, 0x33, 0x33, 200), 1.4));
+            p.drawPolygon(poly);
+        }
     }
 
     // Axis labels
@@ -230,4 +256,51 @@ void Map3DWidget::wheelEvent(QWheelEvent *event)
     m_zoom *= event->angleDelta().y() > 0 ? 1.08 : 0.92;
     m_zoom = qBound(0.3, m_zoom, 3.0);
     update();
+}
+
+void Map3DWidget::setShowOriginalDiffOverlay(bool on)
+{
+    if (m_showOriginalDiff == on) return;
+    m_showOriginalDiff = on;
+    update();
+}
+
+void Map3DWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    if (!m_hasMap) return;   // nothing meaningful to edit
+    QMenu menu(this);
+    auto *editMenu = menu.addMenu(tr("Edit map"));
+    struct E { const char *label; int code; };
+    const E entries[] = {
+        { QT_TR_NOOP("Value +1"),                 0 },
+        { QT_TR_NOOP("Value −1"),                 1 },
+        { QT_TR_NOOP("Change absolute…"),         2 },
+        { QT_TR_NOOP("Change relative…"),         3 },
+        { QT_TR_NOOP("Change by slider…"),        4 },
+        { QT_TR_NOOP("Round / limit…"),           5 },
+        { QT_TR_NOOP("Restore original value"),   6 },
+        { QT_TR_NOOP("Interpolate"),              7 },
+        { QT_TR_NOOP("Smooth"),                   8 },
+        { QT_TR_NOOP("Flatten"),                  9 },
+    };
+    for (const E &e : entries) {
+        QAction *a = editMenu->addAction(tr(e.label));
+        const int code = e.code;
+        connect(a, &QAction::triggered, this,
+                [this, code]() { emit editOpRequested(code); });
+    }
+
+    menu.addSeparator();
+    QAction *resetView = menu.addAction(tr("Reset view"));
+    QAction *toggleWire = menu.addAction(tr("Wireframe"));
+    toggleWire->setCheckable(true);
+    toggleWire->setChecked(m_wireframe);
+
+    QAction *picked = menu.exec(event->globalPos());
+    if (picked == resetView) {
+        this->resetView();
+    } else if (picked == toggleWire) {
+        m_wireframe = !m_wireframe;
+        update();
+    }
 }

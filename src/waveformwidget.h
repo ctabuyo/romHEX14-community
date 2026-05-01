@@ -25,6 +25,12 @@ public:
 
     void showROM(const QByteArray &romData, const QByteArray &originalData);
     void goToAddress(uint32_t offset);
+
+    /// Access to the underlying free-form editor.  Used by MainWindow's
+    /// edit-op dispatcher (Selection menu) so all three views — hex,
+    /// waveform, 3D — funnel through one editor with one undo stack
+    /// per ProjectView.
+    class WaveformEditor *editor() const { return m_editor; }
     void setMaps(const QVector<MapInfo> &maps);
     // Set the auto-detected map candidates (rendered as semi-transparent
     // "AUTO" overlays). These are drawn ONLY when the real A2L-derived map
@@ -52,9 +58,26 @@ signals:
     void selectionToMapRequested(uint32_t address, int length);
     void dataModified(int start, int end);
 
+    /// Emitted when the user moves the zoom slider.  Carries the slider's
+    /// raw value (0..100) so paired waveforms can match scale via
+    /// syncZoomTo().  Mirrors the scrollSynced contract.
+    void zoomSynced(int sliderValue);
+
 public slots:
     void syncScrollTo(int scrollOffset);  // receive sync without re-emitting
     void setComparisonData(const QByteArray &data);
+
+    /// Programmatically set the zoom slider; does NOT re-emit zoomSynced.
+    void syncZoomTo(int sliderValue);
+
+    /// Sprint B: render a translucent red baseline marker at every byte
+    /// that differs from m_originalData.  Toggled by View → Differences
+    /// vs Original.
+    void setShowOriginalDiffOverlay(bool on);
+
+    /// Sprint C: bind to the project's annotation store for vertical
+    /// pin markers at annotation addresses.
+    void setAnnotationStore(class AnnotationStore *store);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -65,6 +88,7 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void leaveEvent(QEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    bool event(QEvent *event) override;          // tooltip for annotations
 
 private:
     // ROM waveform / no-map state
@@ -189,4 +213,11 @@ private:
     QFont m_smallFont;
     QFont m_labelFont;
     QFont m_titleFont;
+
+    // Sprint B — diff-vs-original overlay flag
+    bool m_showOriginalDiff = false;
+
+    // Sprint C — bound annotation store (owned by Project, not us).
+    class AnnotationStore *m_annotations = nullptr;
+    void renderAnnotations(QPainter &p);
 };

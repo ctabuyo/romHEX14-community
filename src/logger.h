@@ -25,6 +25,15 @@ public:
     void init(const QString &path);          // call once at startup
     void log(Level level, const QString &msg,
              const char *file = nullptr, int line = 0);
+    /// Variant that records a category tag (e.g. "rx14.hexsync") in the log
+    /// line.  Used by qInstallMessageHandler to forward QLoggingCategory
+    /// names from `qCDebug(catX) << ...` calls.
+    void log(Level level, const QString &category, const QString &msg,
+             const char *file = nullptr, int line = 0);
+
+    /// Read the last @p maxLines from the log file (newest last).
+    /// Used by the debug RPC `tail` command.
+    QStringList tail(int maxLines) const;
 
     // Low-level: safe to call from signal handler (no Qt, no malloc)
     void writeCrashLine(const char *msg) noexcept;

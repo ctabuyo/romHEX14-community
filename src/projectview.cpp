@@ -141,8 +141,7 @@ ProjectView::ProjectView(QWidget *parent)
         emit mapActivated(map, m_project);
     });
 
-    connect(m_waveWidget, &WaveformWidget::selectionToMapRequested,
-            this, [this](uint32_t address, int length) {
+    auto runCreateMap = [this](uint32_t address, int length) {
         if (!m_project) return;
         CreateMapDlg dlg(address, length, 2, this);
         if (dlg.exec() == QDialog::Accepted) {
@@ -153,7 +152,11 @@ ProjectView::ProjectView(QWidget *parent)
             emit m_project->dataChanged(); // refreshes the left panel tree
             emit mapActivated(newMap, m_project);
         }
-    });
+    };
+    connect(m_waveWidget, &WaveformWidget::selectionToMapRequested,
+            this, runCreateMap);
+    connect(m_hexWidget, &HexWidget::selectionToMapRequested,
+            this, runCreateMap);
 
     // ── Waveform editing → Project sync ────────────────────────────
     connect(m_waveWidget, &WaveformWidget::dataModified, this, [this](int start, int end) {
@@ -168,7 +171,7 @@ ProjectView::ProjectView(QWidget *parent)
             return;
         std::memcpy(m_project->currentData.data() + start,
                     waveData.constData() + start, len);
-        m_hexWidget->loadData(m_project->currentData, m_project->baseAddress);
+        m_hexWidget->refreshData(m_project->currentData);
         m_project->modified = true;
         emit m_project->dataChanged();
     });
@@ -220,7 +223,10 @@ void ProjectView::loadProject(Project *project)
     }
 
     m_titleLabel->setText(project->fullTitle());
-    m_hexWidget->loadData(project->currentData, project->baseAddress);
+    m_hexWidget->loadData(project->currentData, project->originalData,
+                          project->baseAddress);
+    m_hexWidget->setAnnotationStore(project->annotations());
+    m_waveWidget->setAnnotationStore(project->annotations());
 
     // Show ROM data in waveform widget
     if (!project->currentData.isEmpty()) {
@@ -253,7 +259,7 @@ void ProjectView::loadProject(Project *project)
 
     connect(project, &Project::dataChanged, this, [this]() {
         if (m_project) {
-            m_hexWidget->loadData(m_project->currentData, m_project->baseAddress);
+            m_hexWidget->refreshData(m_project->currentData);
             m_titleLabel->setText(m_project->fullTitle());
             // Re-push both map lists so an async auto-scan result or an A2L
             // import triggers a repaint without the caller having to touch
@@ -282,8 +288,10 @@ void ProjectView::showMap(const MapInfo &map)
         m_waveWidget->showROM(m_project->currentData, m_hexWidget->getOriginalData());
     m_waveWidget->goToAddress(map.address);
 
-    if (m_viewStack->currentIndex() == 2 && m_project)
+    if (m_viewStack->currentIndex() == 2 && m_project) {
+        m_map3d->setOriginalData(m_project->originalData);
         m_map3d->showMap(m_project->currentData, map);
+    }
 
     emit mapActivated(map, m_project);
 }
@@ -583,8 +591,10 @@ void ProjectView::switchView(int index)
         if (prevIndex != 0)
             m_waveWidget->showROM(m_project->currentData, m_hexWidget->getOriginalData());
     }
-    if (index == 2 && m_selectedMap.dimensions.x > 0 && m_project)
+    if (index == 2 && m_selectedMap.dimensions.x > 0 && m_project) {
+        m_map3d->setOriginalData(m_project->originalData);
         m_map3d->showMap(m_project->currentData, m_selectedMap);
+    }
 }
 
 // ── Empty-state overlay ───────────────────────────────────────────────────────
@@ -771,4 +781,13 @@ void ProjectView::resizeEvent(QResizeEvent *event)
     QWidget::resizeEvent(event);
     if (m_emptyState && m_emptyState->isVisible())
         positionEmptyState();
+}
+
+void ProjectView::setShowOriginalDiffOverlay(bool on)
+{
+    // Sprint B — push the overlay flag down to each child widget.  Each
+    // widget owns its own rendering; here we only plumb the bit.
+    if (m_hexWidget)  m_hexWidget->setShowOriginalDiffOverlay(on);
+    if (m_waveWidget) m_waveWidget->setShowOriginalDiffOverlay(on);
+    if (m_map3d)      m_map3d->setShowOriginalDiffOverlay(on);
 }
