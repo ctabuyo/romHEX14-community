@@ -43,6 +43,13 @@ public:
     void restoreOriginal(int start, int end);
     void increment(int start, int end, int delta); // +1, -1, +N
 
+    /// Round each cell in [start,end) to the nearest @p multiple, then
+    /// clamp into [@p minVal, @p maxVal].  multiple <= 0 disables the
+    /// rounding step (clamp still runs).  One combined undo entry —
+    /// matches the convention of every other batch op above.
+    void roundLimit(int start, int end, int multiple,
+                    double minVal, double maxVal);
+
     // ── Free-form drawing ───────────────────────────────────────────────
     // Drawing = user drags on the waveform and "paints" values at each
     // horizontal cell position. beginDraw snapshots the affected range,

@@ -6,12 +6,15 @@
 
 #include "hexwidget.h"
 #include "appconfig.h"
+#include "annotations/AnnotationStore.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QScrollBar>
 #include <QFontMetrics>
 #include <QContextMenuEvent>
+#include <QHelpEvent>
+#include <QToolTip>
 #include <QMenu>
 #include <QApplication>
 #include <QClipboard>
@@ -48,8 +51,35 @@ HexWidget::HexWidget(QWidget *parent)
     connect(verticalScrollBar(), &QScrollBar::valueChanged, m_overviewBar,
             QOverload<>::of(&QWidget::update));
 
+    // Cross-project scroll synchronisation: emit the byte offset of the
+    // topmost visible row whenever the user scrolls.  MainWindow listens
+    // and fans out to other open hex views (mirror of waveform sync).
+    connect(verticalScrollBar(), &QScrollBar::valueChanged, this,
+            [this](int row) {
+                if (m_bytesPerRow <= 0) return;
+                emit scrollSynced(row * m_bytesPerRow);
+            });
+
     connect(&AppConfig::instance(), &AppConfig::colorsChanged,
             viewport(), QOverload<>::of(&QWidget::update));
+}
+
+void HexWidget::syncScrollTo(int byteOffset)
+{
+    if (m_bytesPerRow <= 0) return;
+    const int row = byteOffset / m_bytesPerRow;
+    auto *bar = verticalScrollBar();
+    QSignalBlocker block(bar);                  // don't re-emit scrollSynced
+    bar->setValue(qBound(0, row, bar->maximum()));
+    viewport()->update();
+    if (m_overviewBar) m_overviewBar->update();
+}
+
+void HexWidget::setShowOriginalDiffOverlay(bool on)
+{
+    if (m_showOriginalDiff == on) return;
+    m_showOriginalDiff = on;
+    viewport()->update();
 }
 
 void HexWidget::loadData(const QByteArray &data, uint32_t baseAddress)
@@ -67,6 +97,96 @@ void HexWidget::loadData(const QByteArray &data, uint32_t baseAddress)
     m_overviewBar->rebuild();
     updateScrollBar();
     viewport()->update();
+}
+
+void HexWidget::loadData(const QByteArray &data, const QByteArray &original,
+                         uint32_t baseAddress)
+{
+    loadData(data, baseAddress);
+    if (!original.isEmpty() && original.size() == data.size()) {
+        m_originalData = original;
+        // Re-derive modifications from the actual original baseline.
+        m_modifications.clear();
+        const int n = qMin(m_data.size(), m_originalData.size());
+        for (int i = 0; i < n; ++i) {
+            if (static_cast<uint8_t>(m_data[i])
+                != static_cast<uint8_t>(m_originalData[i]))
+                m_modifications.insert(i);
+        }
+        emit dataModified(m_modifications.size());
+        viewport()->update();
+    }
+}
+
+void HexWidget::refreshData(const QByteArray &data)
+{
+    m_data = data;
+    // Recompute modifications against the stable original baseline so the
+    // diff-vs-original overlay reflects edits made through other widgets
+    // (WaveformEditor, savepoint switch, etc.).
+    m_modifications.clear();
+    const int n = qMin(m_data.size(), m_originalData.size());
+    for (int i = 0; i < n; ++i) {
+        if (static_cast<uint8_t>(m_data[i]) != static_cast<uint8_t>(m_originalData[i]))
+            m_modifications.insert(i);
+    }
+    emit dataModified(m_modifications.size());
+    m_overviewBar->rebuild();
+    viewport()->update();
+}
+
+void HexWidget::setAnnotationStore(AnnotationStore *store)
+{
+    if (m_annotations == store) return;
+    if (m_annotations) disconnect(m_annotations, nullptr, this, nullptr);
+    m_annotations = store;
+    if (m_annotations)
+        connect(m_annotations, &AnnotationStore::changed,
+                this, [this]() { viewport()->update(); });
+    setMouseTracking(true);
+    viewport()->setMouseTracking(true);
+    viewport()->update();
+}
+
+bool HexWidget::event(QEvent *event)
+{
+    if (event->type() == QEvent::ToolTip && m_annotations) {
+        auto *he = static_cast<QHelpEvent *>(event);
+        const int relY = he->pos().y() - m_headerHeight;
+        if (relY >= 0) {
+            const int row = verticalScrollBar()->value() + relY / m_rowHeight;
+            const int rowStart = row * m_bytesPerRow;
+            // Pick the first annotation that starts in this row OR whose
+            // range covers the byte under the cursor (column-aware).
+            int col = -1;
+            const int xRel = he->pos().x() - m_offsetWidth;
+            if (xRel >= 0 && m_byteWidth > 0)
+                col = qBound(0, xRel / m_byteWidth, m_bytesPerRow - 1);
+            const qint64 byteIdx = (col >= 0) ? rowStart + col : rowStart;
+            QStringList parts;
+            for (const Annotation &a : m_annotations->all()) {
+                const bool inRow = a.addr >= rowStart
+                                   && a.addr < rowStart + m_bytesPerRow;
+                const bool covers = (col >= 0)
+                                    && byteIdx >= a.addr
+                                    && byteIdx < a.addr + a.length;
+                if (!inRow && !covers) continue;
+                QString tag = a.isMarker() ? tr("Marker") : tr("Comment");
+                QString head = QString("<b>%1 @ 0x%2</b>")
+                                   .arg(tag)
+                                   .arg(a.addr, 8, 16, QChar('0')).toUpper();
+                if (a.length > 1) head += QString(" (+%1 B)").arg(a.length);
+                parts << head;
+                if (!a.text.isEmpty()) parts << a.text.toHtmlEscaped();
+            }
+            if (!parts.isEmpty()) {
+                QToolTip::showText(he->globalPos(), parts.join("<br>"), this);
+                return true;
+            }
+            QToolTip::hideText();
+        }
+    }
+    return QAbstractScrollArea::event(event);
 }
 
 void HexWidget::setBaseAddress(uint32_t baseAddress)
@@ -290,6 +410,32 @@ void HexWidget::renderRow(QPainter &p, int row, int y)
     QString addr = QString("0x%1").arg(m_baseAddress + offset, 8, 16, QChar('0')).toUpper();
     p.drawText(QRect(0, y, m_offsetWidth, m_rowHeight), Qt::AlignRight | Qt::AlignVCenter, addr + "  ");
 
+    // Sprint C — annotation glyph(s) in the offset gutter for any
+    // annotation whose start address falls inside this row.
+    if (m_annotations) {
+        for (const Annotation &a : m_annotations->all()) {
+            if (a.addr < (qint64)offset
+                || a.addr >= (qint64)offset + m_bytesPerRow) continue;
+            const QRect g(2, y + (m_rowHeight - 14) / 2, 14, 14);
+            const bool isMarker = a.isMarker();
+            p.setBrush(isMarker ? QColor(0xff, 0xc8, 0x4c)
+                                : QColor(0x4c, 0xb8, 0xff));
+            p.setPen(QPen(QColor(0, 0, 0, 200), 0.8));
+            p.drawEllipse(g);
+            p.setPen(Qt::black);
+            QFont fnt = p.font();
+            QFont small = fnt; small.setPointSize(7); small.setBold(true);
+            p.setFont(small);
+            p.drawText(g, Qt::AlignCenter,
+                       isMarker ? QStringLiteral("M")
+                                : QStringLiteral("✎"));
+            p.setFont(fnt);
+            p.setBrush(Qt::NoBrush);
+            p.setPen(AppConfig::instance().colors.hexOffset);
+            break;   // one glyph per row is enough
+        }
+    }
+
     // Bytes + ASCII
     QString asciiStr;
     const int groups = m_bytesPerRow / m_groupSize;
@@ -365,6 +511,24 @@ void HexWidget::renderRow(QPainter &p, int row, int y)
             if (m_editing) p.drawRect(br.adjusted(0, 0, -1, -1));
         } else if (isInSelection) {
             // pen already set above
+        } else if (m_showOriginalDiff && isModified
+                   && !m_originalData.isEmpty()) {
+            // Sprint B — delta-magnitude colour ramp.  Compute |now-was|
+            // for the first byte of the group (groups are 1..4 bytes, the
+            // colour is per-cell so first byte is representative enough).
+            const int origByte = (int)baseIdx < m_originalData.size()
+                                     ? static_cast<uint8_t>(m_originalData[baseIdx])
+                                     : 0;
+            const int curByte  = static_cast<uint8_t>(m_data[baseIdx]);
+            const int delta    = qAbs(curByte - origByte);
+            QColor bg;
+            QColor fg;
+            if (delta <= 2)        { bg = QColor( 35, 145,  60, 180); fg = Qt::white; } // green
+            else if (delta <= 16)  { bg = QColor(160, 175,  40, 190); fg = Qt::black; } // yellow-green
+            else if (delta <= 64)  { bg = QColor(220, 160,  30, 200); fg = Qt::black; } // amber
+            else                   { bg = QColor(220,  55,  55, 215); fg = Qt::white; } // red
+            p.fillRect(br, bg);
+            p.setPen(fg);
         } else if (isDiff) {
             p.fillRect(br, QColor(60, 35, 10, 160));  // dark amber background
             p.setPen(QColor(255, 160, 50));            // amber text
@@ -448,6 +612,11 @@ void HexWidget::renderRow(QPainter &p, int row, int y)
 void HexWidget::mousePressEvent(QMouseEvent *event)
 {
     if (m_data.isEmpty()) return;
+
+    // Right-click is only for the context menu; never clear / move the
+    // selection on press, otherwise "Selection → Map…" sees an empty
+    // selection by the time `contextMenuEvent` fires.
+    if (event->button() == Qt::RightButton) return;
 
     int x = event->pos().x();
     int y = event->pos().y();
@@ -732,9 +901,49 @@ void HexWidget::contextMenuEvent(QContextMenuEvent *event)
 {
     QMenu menu(this);
 
+    const bool sel = hasSelection();
+
+    // ── Selection → Map (WinOLS-style hex-dump map definition) ──
+    QAction *actSelToMap = menu.addAction(tr("Selection → Map…"));
+    actSelToMap->setEnabled(sel && (selEnd() - selStart() + 1) >= 2);
+    connect(actSelToMap, &QAction::triggered, this, [this]() {
+        const int s = selStart();
+        const int e = selEnd();
+        emit selectionToMapRequested(static_cast<uint32_t>(s), e - s + 1);
+    });
+    menu.addSeparator();
+
+    // ── Edit selection — same ops as the global Selection menu and the
+    //    waveform's right-click.  Op codes match MainWindow::EditOp so
+    //    MainWindow can route them straight through applyEditOp() with
+    //    a single dispatcher.
+    {
+        QMenu *editMenu = menu.addMenu(tr("Edit selection"));
+        editMenu->setEnabled(sel);
+        struct E { const char *label; int code; };
+        const E entries[] = {
+            { QT_TR_NOOP("Value +1"),                 0 },   // EditOp::ValuePlus1
+            { QT_TR_NOOP("Value −1"),                 1 },   // EditOp::ValueMinus1
+            { QT_TR_NOOP("Change absolute…"),         2 },
+            { QT_TR_NOOP("Change relative…"),         3 },
+            { QT_TR_NOOP("Change by slider…"),        4 },
+            { QT_TR_NOOP("Round / limit…"),           5 },
+            { QT_TR_NOOP("Restore original value"),   6 },
+            { QT_TR_NOOP("Interpolate"),              7 },
+            { QT_TR_NOOP("Smooth"),                   8 },
+            { QT_TR_NOOP("Flatten"),                  9 },
+        };
+        for (const E &e : entries) {
+            QAction *a = editMenu->addAction(tr(e.label));
+            const int code = e.code;
+            connect(a, &QAction::triggered, this,
+                    [this, code]() { emit editOpRequested(code); });
+        }
+        menu.addSeparator();
+    }
+
     QAction *actAscii = menu.addAction(tr("ASCII view"));
     QAction *actBars  = menu.addAction(tr("Bar view"));
-
     actAscii->setCheckable(true);
     actBars ->setCheckable(true);
     actAscii->setChecked(m_sidebarMode == SidebarMode::ASCII);

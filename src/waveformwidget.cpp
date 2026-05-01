@@ -7,6 +7,9 @@
 #include "waveformwidget.h"
 #include "appconfig.h"
 #include "logger.h"
+#include "annotations/AnnotationStore.h"
+#include <QHelpEvent>
+#include <QToolTip>
 #include <QPainter>
 #include <QPainterPath>
 #include <QImage>
@@ -114,6 +117,7 @@ WaveformWidget::WaveformWidget(QWidget *parent)
         clampScroll();
         invalidatePixCache();
         update();
+        emit zoomSynced(val);   // fan-out to other waveforms when sync is on
     });
 
     connect(&AppConfig::instance(), &AppConfig::colorsChanged,
@@ -633,6 +637,7 @@ void WaveformWidget::paintEvent(QPaintEvent *)
         }
         p.drawPixmap(0, 0, m_renderCache);
         renderModifiedOverlay(p);  // highlight modified cells in orange
+        renderAnnotations(p);      // Sprint C — pins at comment offsets
         renderSelection(p);        // dynamic overlay
 
     } catch (const std::exception &ex) {
@@ -1872,6 +1877,121 @@ void WaveformWidget::setComparisonData(const QByteArray &data)
     update();
 }
 
+void WaveformWidget::syncZoomTo(int sliderValue)
+{
+    if (!m_zoomSlider) return;
+    if (m_zoomSlider->value() == sliderValue) return;
+    QSignalBlocker blk(m_zoomSlider);   // do not re-emit zoomSynced
+    m_zoomSlider->setValue(sliderValue);
+    updateZoomFromSlider(sliderValue);
+    clampScroll();
+    invalidatePixCache();
+    update();
+}
+
+void WaveformWidget::setShowOriginalDiffOverlay(bool on)
+{
+    if (m_showOriginalDiff == on) return;
+    m_showOriginalDiff = on;
+    update();
+}
+
+void WaveformWidget::setAnnotationStore(AnnotationStore *store)
+{
+    if (m_annotations == store) return;
+    if (m_annotations) disconnect(m_annotations, nullptr, this, nullptr);
+    m_annotations = store;
+    if (m_annotations)
+        connect(m_annotations, &AnnotationStore::changed,
+                this, [this]() { update(); });
+    setMouseTracking(true);
+    update();
+}
+
+bool WaveformWidget::event(QEvent *evt)
+{
+    if (evt->type() == QEvent::ToolTip && m_annotations
+        && !m_data.isEmpty() && m_cellSize > 0) {
+        auto *he = static_cast<QHelpEvent *>(evt);
+        const int x = he->pos().x();
+        if (x >= kYAxisW) {
+            const int xRel = x - kYAxisW;
+            const int valIdx = m_scrollOffset + static_cast<int>(xRel * m_valsPerPx);
+            const qint64 byteIdx = static_cast<qint64>(valIdx) * m_cellSize;
+
+            // Find the closest annotation to this byte (within 4 px tolerance)
+            const double tolBytes = 4.0 * m_valsPerPx * m_cellSize;
+            QStringList parts;
+            for (const Annotation &a : m_annotations->all()) {
+                const bool covers = byteIdx >= a.addr
+                                    && byteIdx < a.addr + a.length;
+                const bool near   = qAbs<qint64>(byteIdx - a.addr) <= tolBytes;
+                if (!covers && !near) continue;
+                QString tag = a.isMarker() ? tr("Marker") : tr("Comment");
+                QString head = QString("<b>%1 @ 0x%2</b>")
+                                   .arg(tag)
+                                   .arg(a.addr, 8, 16, QChar('0')).toUpper();
+                if (a.length > 1) head += QString(" (+%1 B)").arg(a.length);
+                parts << head;
+                if (!a.text.isEmpty()) parts << a.text.toHtmlEscaped();
+            }
+            if (!parts.isEmpty()) {
+                QToolTip::showText(he->globalPos(), parts.join("<br>"), this);
+                return true;
+            }
+            QToolTip::hideText();
+        }
+    }
+    return QWidget::event(evt);
+}
+
+void WaveformWidget::renderAnnotations(QPainter &p)
+{
+    if (!m_annotations) return;
+    if (m_annotations->all().isEmpty()) return;
+    if (m_data.isEmpty() || m_cellSize <= 0) return;
+    const int w = width();
+    const int h = height();
+    const int plotW = w - kYAxisW - 4;
+    if (plotW <= 0) return;
+    const int topY = kControlsH;
+    const int botY = h - kXAxisH - kOverviewH;
+    if (botY <= topY) return;
+
+    p.save();
+    for (const Annotation &a : m_annotations->all()) {
+        const int valIdx = static_cast<int>(a.addr / m_cellSize);
+        const int relIdx = valIdx - m_scrollOffset;
+        if (relIdx < 0) continue;
+        const double xd = relIdx / m_valsPerPx;
+        if (xd < 0 || xd > plotW) continue;
+        const int x = kYAxisW + static_cast<int>(xd);
+
+        // Vertical pin line from top to bottom of plot area.
+        const QColor col = a.isMarker() ? QColor(0xff, 0xc8, 0x4c)
+                                        : QColor(0x4c, 0xb8, 0xff);
+        p.setPen(QPen(col, 1.5, Qt::DashLine));
+        p.drawLine(x, topY, x, botY);
+
+        // Pin head at the top.
+        p.setPen(Qt::NoPen);
+        p.setBrush(col);
+        p.drawEllipse(QPoint(x, topY + 4), 5, 5);
+
+        // Length-range bar (thicker line at the bottom across covered values).
+        if (a.length > 1) {
+            const int valLen = qMax<qint64>(1, (a.length + m_cellSize - 1)
+                                                  / m_cellSize);
+            const int relEnd = relIdx + valLen;
+            const double xeD = relEnd / m_valsPerPx;
+            const int xe = kYAxisW + static_cast<int>(qMin((double)plotW, xeD));
+            p.setPen(QPen(col, 3));
+            p.drawLine(x, botY - 2, xe, botY - 2);
+        }
+    }
+    p.restore();
+}
+
 void WaveformWidget::leaveEvent(QEvent *)
 {
     m_hoverOffset = -1;
@@ -2185,8 +2305,14 @@ void WaveformWidget::renderModifiedOverlay(QPainter &p)
         return topY + plotH - (int)((v - lo) / rng * plotH);
     };
 
-    // Collect modified pixel segments for the thick orange overlay line
-    const QColor modColor(0xf0, 0x88, 0x3e);  // #f0883e warm orange
+    // Collect modified pixel segments for the thick orange overlay line.
+    // Sprint B: when "Diff vs Original" overlay is on, swap orange for
+    // bright red and increase line weight so it stands out vs the regular
+    // waveform — same visual key the hex/3D widgets use.
+    const QColor modColor = m_showOriginalDiff
+                                ? QColor(0xff, 0x55, 0x55)   // red
+                                : QColor(0xf0, 0x88, 0x3e);  // orange
+    const qreal modWeight = m_showOriginalDiff ? 3.5 : 2.5;
     p.setRenderHint(QPainter::Antialiasing, true);
 
     bool prevModified = false;
@@ -2209,12 +2335,12 @@ void WaveformWidget::renderModifiedOverlay(QPainter &p)
         }
 
         if (modified && px > 0 && prevModified) {
-            p.setPen(QPen(modColor, 2.5));
+            p.setPen(QPen(modColor, modWeight));
             p.drawLine(QPointF(px - 1, valToY(m_pixAvg[px - 1])),
                        QPointF(px,     valToY(m_pixAvg[px])));
         } else if (modified && px > 0) {
             // First modified pixel after unmodified — draw a dot
-            p.setPen(QPen(modColor, 2.5));
+            p.setPen(QPen(modColor, modWeight));
             p.drawPoint(QPointF(px, valToY(m_pixAvg[px])));
         }
         prevModified = modified;

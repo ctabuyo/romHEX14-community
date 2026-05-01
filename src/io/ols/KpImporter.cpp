@@ -84,7 +84,8 @@ KpImportResult KpImporter::importFromBytes(const QByteArray &fileData,
         return result;
     }
 
-    static const char magic[] = "OLS File";
+    // Check magic: u32 length prefix == 11 followed by "WinOLS File\0"
+    static const char magic[] = "WinOLS File";
     uint32_t magicLen = qFromLittleEndian<uint32_t>(
         reinterpret_cast<const uchar *>(fileData.constData()));
     if (magicLen != 11

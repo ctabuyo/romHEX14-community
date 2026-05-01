@@ -56,6 +56,15 @@ public:
     explicit HexWidget(QWidget *parent = nullptr);
 
     void loadData(const QByteArray &data, uint32_t baseAddress = 0);
+    /// Initial project attach: pass current bytes plus the unedited
+    /// baseline so the diff-vs-original overlay has a stable reference
+    /// even when a saved project is reopened with edits in place.
+    void loadData(const QByteArray &data, const QByteArray &original,
+                  uint32_t baseAddress);
+    /// Update current bytes after an external edit (WaveformEditor, savepoint
+    /// switch, ...). Keeps m_originalData stable so the diff-vs-original
+    /// overlay still works.
+    void refreshData(const QByteArray &data);
     void setBaseAddress(uint32_t baseAddress);
     void setDisplayParams(int cellSize, ByteOrder bo,
                           int displayFmt = 0, bool isSigned = false);
@@ -71,6 +80,8 @@ public:
     bool hasSelection() const { return m_selectionStart >= 0 && m_selectionEnd >= 0; }
     int selStart() const { return qMin(m_selectionStart, m_selectionEnd); }
     int selEnd() const { return qMax(m_selectionStart, m_selectionEnd); }
+    /// Current caret offset (set by goToAddress / mouse click). -1 if none.
+    int32_t currentOffset() const { return m_selectedOffset; }
 
     // Accessed by HexOverviewBar
     const QByteArray &romData() const { return m_data; }
@@ -85,8 +96,43 @@ signals:
     void dataModified(int modCount);
     void bytesModified(int start, int length);
 
+    /// Emitted when the user scrolls the hex view.  Carries the byte
+    /// offset of the topmost visible row, so other hex/waveform views can
+    /// keep their visible region aligned.  Mirrors WaveformWidget's
+    /// scrollSynced contract.
+    void scrollSynced(int byteOffset);
+
 public slots:
     void setComparisonData(const QByteArray &data);
+
+    /// Programmatically scroll so the byte at @p byteOffset is the top
+    /// visible row.  Does NOT re-emit scrollSynced (avoids feedback loops
+    /// when the sender is the sync coordinator).
+    void syncScrollTo(int byteOffset);
+
+    /// Sprint B: when true, every cell that differs from m_originalData
+    /// is rendered with a delta-magnitude background (green→yellow→
+    /// orange→red by |now-was|) instead of the plain "modified" tint.
+    void setShowOriginalDiffOverlay(bool on);
+
+    /// Sprint C: bind to the project's annotation store so the offset
+    /// gutter can paint a ✎ glyph at addresses that have a comment, and
+    /// hover tooltips show the comment text.
+    void setAnnotationStore(class AnnotationStore *store);
+
+signals:
+    /// Emitted when the user picks an edit op from the right-click menu.
+    /// MainWindow listens via ProjectView and routes through the same
+    /// `applyEditOp()` dispatcher used by the global Selection menu so
+    /// hex / waveform / 3D share one undo stack per project.
+    /// @p opCode mirrors MainWindow::EditOp.
+    void editOpRequested(int opCode);
+
+    /// Selection → Map: mirrors WaveformWidget's contract so the same
+    /// `CreateMapDlg` flow in ProjectView handles both views.  Emitted
+    /// from the right-click "Selection → Map…" entry; @p address is
+    /// the start byte offset, @p length is in bytes.
+    void selectionToMapRequested(uint32_t address, int length);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -95,6 +141,7 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
+    bool event(QEvent *event) override;          // tooltip for annotations
 
 private:
     void updateScrollBar();
@@ -143,4 +190,10 @@ private:
     HexOverviewBar *m_overviewBar = nullptr;
 
     QFont m_monoFont;
+
+    // Sprint B — diff-vs-original overlay flag.
+    bool m_showOriginalDiff = false;
+
+    // Sprint C — bound annotation store (owned by Project, not us).
+    class AnnotationStore *m_annotations = nullptr;
 };

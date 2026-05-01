@@ -20,8 +20,18 @@
 #include <QCborValue>
 #include "io/rx14container.h"
 #include "util/Blake3.h"
+#include "annotations/AnnotationStore.h"
 
 Project::Project(QObject *parent) : QObject(parent) {}
+
+AnnotationStore *Project::annotations()
+{
+    if (!m_annotations) {
+        m_annotations = new AnnotationStore(this);
+        m_annotations->attachTo(this);
+    }
+    return m_annotations;
+}
 
 QString Project::displayName() const
 {

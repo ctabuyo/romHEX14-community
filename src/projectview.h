@@ -32,6 +32,12 @@ public:
     Project        *project()        const { return m_project; }
     WaveformWidget *waveformWidget() const { return m_waveWidget; }
     HexWidget      *hexWidget()      const { return m_hexWidget; }
+    Map3DWidget    *map3dWidget()    const { return m_map3d; }
+    /// The map currently shown in the 2D/3D views (set via showMap/goToMap).
+    /// Used by Sprint A's "operate on whole map when no byte selection
+    /// exists" fallback in MainWindow's edit-op dispatcher.
+    const MapInfo  &selectedMap()    const { return m_selectedMap; }
+    int             currentViewIndex() const { return m_viewStack ? m_viewStack->currentIndex() : 0; }
 
     // Called by MainWindow when a map is selected in the left panel
     void showMap(const MapInfo &map);
@@ -55,6 +61,12 @@ signals:
 
 public slots:
     void switchView(int index); // 0=Text/Hex  1=2D/Waveform  2=3D
+
+    /// Sprint B: forward "Diff vs Original" overlay flag to all three
+    /// child widgets (hex / waveform / 3D map).  Each widget renders the
+    /// flag in its own way.  Called by MainWindow when the user toggles
+    /// the View → Differences vs Original action.
+    void setShowOriginalDiffOverlay(bool on);
     void onAddVersion();
 
 protected:

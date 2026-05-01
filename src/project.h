@@ -250,6 +250,11 @@ public:
     // synthetic segment covering the entire ROM.
     QVector<OlsSegmentSnapshot> olsSegments;
 
+    // Per-project comments / markers at ROM offsets (Sprint C). Lazily
+    // attached the first time it's queried; persisted as
+    // `<basename>.comments.json` sidecar next to the .rx14proj.
+    class AnnotationStore *annotations();
+
     // Persistence
     bool save();
     bool saveAs(const QString &path);
@@ -271,4 +276,7 @@ signals:
     void dataChanged();
     void versionsChanged();
     void linkedRomsChanged();
+
+private:
+    class AnnotationStore *m_annotations = nullptr;
 };

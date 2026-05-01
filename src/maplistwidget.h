@@ -25,9 +25,16 @@ public:
     void clear();
     void setProgressMessage(const QString &msg, int pct);
     void retranslateUi();
+    /// Sprint E — every map currently selected in the tree (extended
+    /// selection). Empty when nothing is selected.
+    QVector<MapInfo> selectedMaps() const;
 
 signals:
     void mapSelected(const MapInfo &map);
+    /// Sprint E — fired when the user right-clicks the map tree with
+    /// 2+ rows selected and chooses "Bulk edit…". MainWindow listens
+    /// and pops the bulk edit dialog.
+    void bulkEditRequested(const QVector<MapInfo> &maps);
 
 private slots:
     void onItemClicked(QTreeWidgetItem *item, int column);

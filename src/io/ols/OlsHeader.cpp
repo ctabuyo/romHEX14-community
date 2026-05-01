@@ -13,7 +13,7 @@ namespace ols {
 
 static constexpr qsizetype kHeaderSize = 24;
 static constexpr uint32_t  kExpectedMagic = 0x0000000Bu;
-static const char          kSignature[] = "OLS File";
+static const char          kSignature[] = "WinOLS File";
 static constexpr int       kSignatureLen = 11;
 
 OlsHeader OlsHeader::parse(const QByteArray &fileData)
@@ -38,7 +38,7 @@ OlsHeader OlsHeader::parse(const QByteArray &fileData)
     }
 
     if (std::memcmp(fileData.constData() + 0x04, kSignature, kSignatureLen) != 0) {
-        hdr.error = OlsHeader::tr("Signature mismatch: expected 'OLS File'");
+        hdr.error = OlsHeader::tr("Signature mismatch: expected 'WinOLS File'");
         return hdr;
     }
 

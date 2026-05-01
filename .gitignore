@@ -3,6 +3,8 @@ resources/*.dll
 
 # Build output
 build/
+build-*/
+dist/
 *.obj
 *.o
 *.exe
@@ -24,11 +26,16 @@ ui_*.h
 # IDE / editor
 .vscode/
 .qtcreator/
+.idea/
 *.user
 *.user.*
 CMakeLists.txt.user
 .DS_Store
 Thumbs.db
+
+# Local logs / installer traces
+*.log
+aqtinstall.log
 
 # CMake cache
 CMakeCache.txt

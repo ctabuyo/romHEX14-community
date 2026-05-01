@@ -363,6 +363,59 @@ AboutDialog::AboutDialog(QWidget *parent)
         cl->addWidget(eeCard);
     }
 
+    // ── Contributor card (cyberpunk vibe) ─────────────────────────────────
+    // Glitchy ASCII-anonymous ribbon at the bottom of About — mirrors the
+    // /v0/ subculture aesthetic the contributor asked for.  Colours pulled
+    // from the rest of the dialog so it doesn't look bolted on.
+    {
+        auto *coCard = new QFrame();
+        coCard->setObjectName("contribCard");
+        coCard->setStyleSheet(
+            "QFrame#contribCard {"
+            "  background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "    stop:0 #0d1117, stop:0.5 #161b22, stop:1 #0d1117);"
+            "  border: 1px solid #30363d;"
+            "  border-left: 3px solid #00ff88;"
+            "  border-radius: 8px;"
+            "}");
+        auto *coLay = new QHBoxLayout(coCard);
+        coLay->setContentsMargins(14, 8, 14, 8);
+        coLay->setSpacing(12);
+
+        auto *glyph = new QLabel(QStringLiteral("[ ⚡ ]"));
+        glyph->setStyleSheet(
+            "color: #00ff88; font-family: 'Consolas','Courier New',monospace;"
+            "font-size: 13pt; font-weight: bold; background: transparent;"
+            "letter-spacing: 1px;");
+        coLay->addWidget(glyph, 0, Qt::AlignVCenter);
+
+        auto *coTxt = new QLabel(tr(
+            "<span style='color:#8b949e; font-family:Consolas,monospace; "
+            "font-size:9pt; letter-spacing:1px;'>"
+            "&gt; CONTRIBUTOR<span style='color:#00ff88;'>_</span>"
+            "</span>"
+            "<br/>"
+            "<span style='color:#e7eefc; font-family:Consolas,monospace; "
+            "font-size:11pt; font-weight:bold; letter-spacing:2px;'>"
+            "Ogorek"
+            "</span>"
+            "&nbsp;&nbsp;"
+            "<span style='color:#58a6ff; font-family:Consolas,monospace; "
+            "font-size:9pt;'>"
+            "// We Are Legion"
+            "</span>"
+            "<br/>"
+            "<span style='color:#484f58; font-family:Consolas,monospace; "
+            "font-size:8pt; letter-spacing:1px;'>"
+            "We do not forgive. We do not forget. Expect us."
+            "</span>"));
+        coTxt->setTextFormat(Qt::RichText);
+        coTxt->setStyleSheet("background: transparent;");
+        coLay->addWidget(coTxt, 1);
+
+        cl->addWidget(coCard);
+    }
+
     cl->addStretch();
 
     // ── Footer ────────────────────────────────────────────────────────────────

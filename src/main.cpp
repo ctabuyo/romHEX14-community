@@ -37,7 +37,8 @@ static void qtMessageHandler(QtMsgType type, const QMessageLogContext &ctx,
     case QtFatalMsg:    level = Logger::Critical; break;
     default:            level = Logger::Info;     break;
     }
-    Logger::instance().log(level, msg, ctx.file, ctx.line);
+    QString cat = ctx.category ? QString::fromLatin1(ctx.category) : QString();
+    Logger::instance().log(level, cat, msg, ctx.file, ctx.line);
 
     if (type == QtFatalMsg) {
         Logger::instance().writeCrashLine("QtFatalMsg received — aborting");
@@ -94,6 +95,11 @@ int main(int argc, char *argv[])
     // ── Logger ─────────────────────────────────────────────────────────────
     // Must be initialised before QApplication so it can catch early Qt messages.
     {
+#ifdef RX14_DEBUG_RPC
+        // Debug build: log to D:\rx14-debug so the dev workspace doesn't fill
+        // up the C: drive.  The directory is created on first write.
+        QString logPath = QStringLiteral("D:/rx14-debug/rx14.log");
+#else
         QString logDir = QStandardPaths::writableLocation(
                              QStandardPaths::AppDataLocation);
         // QStandardPaths needs org/app set first — set them manually here
@@ -101,6 +107,7 @@ int main(int argc, char *argv[])
         QString logPath = logDir + "/CT14/romHEX14/rx14.log";
         // Fallback: write next to exe if AppData not available
         if (logDir.isEmpty()) logPath = "rx14.log";
+#endif
         Logger::instance().init(logPath);
     }
 
@@ -139,8 +146,13 @@ int main(int argc, char *argv[])
 
     // Re-init logger now that QStandardPaths works properly
     {
+#ifdef RX14_DEBUG_RPC
+        // Debug build keeps the D:\rx14-debug path set above.
+        QString logPath = QStringLiteral("D:/rx14-debug/rx14.log");
+#else
         QString logPath = QStandardPaths::writableLocation(
                               QStandardPaths::AppDataLocation) + "/rx14.log";
+#endif
         Logger::instance().init(logPath);
     }
 
