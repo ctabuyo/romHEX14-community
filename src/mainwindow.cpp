@@ -2419,6 +2419,30 @@ void MainWindow::retranslateUi()
     m_actPct->setToolTip(tr("Display values as percentage"));
     m_actHeightColors->setToolTip(tr("Turn height colours on / off"));
 
+    // ── PR3 feature actions ───────────────────────────────────────────
+    if (m_actToggleAI)        m_actToggleAI->setText(tr("AI Assistant"));
+    if (m_actToggleDiff)      m_actToggleDiff->setText(tr("Differences"));
+    if (m_actToggleSavepoints) m_actToggleSavepoints->setText(tr("Tuning Branches"));
+    if (m_actDiffOriginal)    m_actDiffOriginal->setText(tr("Differences vs Original"));
+    if (m_actValPlus1)        m_actValPlus1->setText(tr("Value +1"));
+    if (m_actValMinus1)       m_actValMinus1->setText(tr("Value \u22121"));
+    if (m_actChangeAbs)       m_actChangeAbs->setText(tr("Change absolute\u2026"));
+    if (m_actChangeRel)       m_actChangeRel->setText(tr("Change relative\u2026"));
+    if (m_actChangeSlider)    m_actChangeSlider->setText(tr("Change by slider\u2026"));
+    if (m_actRoundLimit)      m_actRoundLimit->setText(tr("Round / limit values\u2026"));
+    if (m_actOriginalVal)     m_actOriginalVal->setText(tr("Restore original value"));
+    if (m_actInterpolate)     m_actInterpolate->setText(tr("Interpolate"));
+    if (m_actSmooth)          m_actSmooth->setText(tr("Smooth"));
+    if (m_actFlatten)         m_actFlatten->setText(tr("Flatten (set to mean)"));
+    if (m_actAgain)           m_actAgain->setText(tr("Again"));
+    if (m_actInsertComment)   m_actInsertComment->setText(tr("Insert comment\u2026"));
+    if (m_actInsertMarker)    m_actInsertMarker->setText(tr("Insert marker"));
+    if (m_actDeleteComment)   m_actDeleteComment->setText(tr("Delete annotation here"));
+    if (m_actNextMarker)      m_actNextMarker->setText(tr("Next marker"));
+    if (m_actPrevMarker)      m_actPrevMarker->setText(tr("Previous marker"));
+    if (m_diffDock)           m_diffDock->setWindowTitle(tr("Differences"));
+    if (m_savepointsDock)     m_savepointsDock->setWindowTitle(tr("Tuning Branches"));
+
     // ── Menu titles ───────────────────────────────────────────────────
     m_menuProject->setTitle(tr("&Project"));
     m_menuEdit->setTitle(tr("&Edit"));

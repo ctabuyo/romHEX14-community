@@ -38,6 +38,54 @@ The community edition builds with `RX14_PRO_BUILD=OFF` (the default).
 - Prefer `QStringLiteral()` over `QString("")` for string literals
 - Every new `.cpp`/`.h` file must include the copyright header (see any existing file for the template)
 
+## Internationalization (i18n)
+
+romHEX 14 supports 4 languages: English, Chinese (简体中文), Spanish (Español), and Thai (ไทย). **All user-visible strings must be translatable.**
+
+### Rules
+
+1. **Wrap every UI string in `tr()`** — menu items, labels, tooltips, error messages, status bar text
+2. **Don't translate**: brand names, keyboard shortcuts, file extensions, format strings like `"0x%1"`, HTML/CSS markup
+3. **Update `retranslateUi()`** — if you add a new `QAction` or `QDockWidget`, add a corresponding `setText(tr(...))` / `setWindowTitle(tr(...))` call in `MainWindow::retranslateUi()` so the text updates when the user switches language at runtime
+
+### Updating Translation Files
+
+After adding or changing any `tr()` strings, run `lupdate` to extract them into the `.ts` files:
+
+```bash
+# From the project root:
+lupdate src/ -ts translations/rx14_en.ts translations/rx14_zh_CN.ts translations/rx14_es.ts translations/rx14_th.ts -no-obsolete
+```
+
+If you don't have `lupdate` in your PATH, it's in your Qt installation:
+```bash
+~/Qt/6.8.3/macos/bin/lupdate src/ -ts translations/rx14_*.ts -no-obsolete
+```
+
+This will:
+- Add new `tr()` strings as `<translation type="unfinished">` entries
+- Remove obsolete strings that no longer exist in the code
+
+### Providing Translations
+
+If you can translate to any of the supported languages:
+
+1. Open the relevant `.ts` file in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html) or a text editor
+2. Find entries marked `type="unfinished"` 
+3. Fill in the `<translation>` text
+4. Remove the `type="unfinished"` attribute
+5. Include the updated `.ts` files in your PR
+
+You don't need to compile `.qm` files — CMake does that automatically at build time.
+
+### Quick Checklist for PRs
+
+- [ ] All new UI strings wrapped in `tr()`
+- [ ] New actions/docks added to `retranslateUi()`
+- [ ] `lupdate` run and `.ts` files updated
+- [ ] English `.ts` entries filled (copy source text)
+- [ ] Other languages: provide translations if you can, otherwise leave as `unfinished`
+
 ## Submitting Changes
 
 ### Pull Requests
@@ -46,6 +94,7 @@ The community edition builds with `RX14_PRO_BUILD=OFF` (the default).
 2. Write a clear title and description explaining **what** and **why**
 3. If your PR addresses an issue, reference it: `Fixes #123`
 4. Make sure the project builds without errors before submitting
+5. Run `lupdate` and include updated `.ts` files
 
 ### Commit Messages
 
@@ -80,6 +129,7 @@ The application follows a standard Qt6 MDI (Multiple Document Interface) archite
 - `ProjectView` — MDI sub-window wrapping hex/waveform/3D views
 - `MapOverlay` — Inline 2D map editor with axis display
 - `src/io/ols/` — OLS/KP file format parser (import only in community edition)
+- `translations/` — Qt Linguist `.ts` files for all 4 languages
 
 ## License
 
