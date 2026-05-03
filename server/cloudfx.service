@@ -1,0 +1,31 @@
+[Unit]
+Description=cloudfx -- romHEX14 cloud API
+After=network.target
+
+[Service]
+Type=simple
+User=cloudfx
+Group=cloudfx
+WorkingDirectory=/var/www/cloudfx
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/var/www/cloudfx/venv/bin/gunicorn \
+    --bind 127.0.0.1:5095 \
+    --workers 2 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    app:app
+Restart=on-failure
+RestartSec=2
+
+# Modest hardening.  The service handles user-uploaded ROMs, so we keep
+# write access to /var/lib/cloudfx and /etc/cloudfx but lock everything
+# else down.  Adjust to taste.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+ReadWritePaths=/var/lib/cloudfx /etc/cloudfx
+
+[Install]
+WantedBy=multi-user.target

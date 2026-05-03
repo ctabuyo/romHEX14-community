@@ -5,6 +5,7 @@
  */
 
 #include "introwizard.h"
+#include "appconstants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPainter>
@@ -379,7 +380,7 @@ void IntroWizard::buildSlides()
     registerBtn->setStyleSheet(kPrimaryBtnSS);
     registerBtn->setCursor(Qt::PointingHandCursor);
     connect(registerBtn, &QPushButton::clicked, this, []() {
-        QString lang = QSettings("CT14", "RX14").value("language", "en").toString();
+        QString lang = rx14::appSettings().value("language", "en").toString();
         QDesktopServices::openUrl(QUrl("https://example.com/register?lang=" + lang));
     });
     btnRow->addWidget(registerBtn);

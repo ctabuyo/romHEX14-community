@@ -5,6 +5,7 @@
  */
 
 #include "aboutdialog.h"
+#include "appconstants.h"
 #include <QCoreApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -434,13 +435,13 @@ AboutDialog::AboutDialog(QWidget *parent)
 
     root->addWidget(content, 1);
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/AboutDialog").toByteArray());
 }
 
 void AboutDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/AboutDialog", saveGeometry());
     QDialog::closeEvent(event);
 }

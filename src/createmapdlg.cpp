@@ -5,6 +5,7 @@
  */
 
 #include "createmapdlg.h"
+#include "appconstants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -148,13 +149,13 @@ CreateMapDlg::CreateMapDlg(uint32_t startAddress, int selectionLength,
 
     updatePreview();
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/CreateMapDlg").toByteArray());
 }
 
 void CreateMapDlg::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/CreateMapDlg", saveGeometry());
     QDialog::closeEvent(event);
 }

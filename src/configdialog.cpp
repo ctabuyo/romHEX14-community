@@ -5,6 +5,7 @@
  */
 
 #include "configdialog.h"
+#include "appconstants.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QGridLayout>
@@ -133,13 +134,13 @@ ConfigDialog::ConfigDialog(QWidget *parent)
 
     connect(m_nav, &QListWidget::currentRowChanged, m_stack, &QStackedWidget::setCurrentIndex);
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/ConfigDialog").toByteArray());
 }
 
 void ConfigDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/ConfigDialog", saveGeometry());
     QDialog::closeEvent(event);
 }

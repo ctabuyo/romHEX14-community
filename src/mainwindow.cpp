@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "appconstants.h"
 #include "communityupdatechecker.h"
 #include "hexcomparedlg.h"
 #include "diffpanel.h"
@@ -7,12 +8,18 @@
 #include "io/MapListExporter.h"
 #include "edit/FindSimilarMapsDlg.h"
 #include "edit/MapFingerprint.h"
+#include "io/winols/SimilarFilesDlg.h"
+#include "io/winols/BuildIndexProgressDlg.h"
+#include "io/winols/SimilarityIndex.h"
+#include "io/winols/WinOlsConfig.h"
+#include "io/winols/OlsCfgParser.h"
 #include "savepoints/SavepointsPanel.h"
+#include "debug/DebugLog.h"
 #include <QDockWidget>
+#include <QElapsedTimer>
 #include <QScrollBar>
 #ifdef RX14_DEBUG_RPC
 #  include "debug/DebugRpc.h"
-#  include "debug/DebugLog.h"
 #  include "logger.h"
 #  include <QJsonObject>
 #  include <QJsonArray>
@@ -721,7 +728,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     // ── Load saved language (retranslates UI if not English) ──────────
-    QString lang = QSettings("CT14", "RX14")
+    QString lang = rx14::appSettings()
                    .value("language",
                           QLocale::system().name().section('_', 0, 0))
                    .toString();
@@ -744,7 +751,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(qApp, &QApplication::applicationStateChanged,
             this, [this](Qt::ApplicationState s) {
         if (s == Qt::ApplicationInactive
-            && QSettings("CT14", "RX14").value("autoSaveMode", "afterDelay")
+            && rx14::appSettings().value("autoSaveMode", "afterDelay")
                    .toString() == "onWindowDeactivate") {
             autoSaveAll();
         }
@@ -874,7 +881,7 @@ void MainWindow::loadLanguage(const QString &lang)
     qApp->installTranslator(&m_qtTr);
     qApp->installTranslator(&m_appTr);
 
-    QSettings("CT14", "RX14").setValue("language", lang);
+    rx14::appSettings().setValue("language", lang);
 
     retranslateUi();
 
@@ -2109,7 +2116,7 @@ void MainWindow::buildActions()
     m_actDiffOriginal->setShortcut(QKeySequence("Ctrl+Shift+O"));
     m_actDiffOriginal->setToolTip(
         tr("Highlight every cell that differs from the project's original ROM"));
-    m_showOriginalDiff = QSettings("CT14", "romHEX14")
+    m_showOriginalDiff = rx14::appSettings()
                             .value("view/showOriginalDiff", false).toBool();
     m_actDiffOriginal->setChecked(m_showOriginalDiff);
     connect(m_actDiffOriginal, &QAction::toggled,
@@ -2453,6 +2460,42 @@ void MainWindow::retranslateUi()
     m_menuProject->addAction(m_actExportOLS);
     m_menuProject->addSeparator();
     m_menuProject->addAction(m_actAddVersion);
+    {
+        // Sprint H — Open Version in new window submenu (dynamic).
+        // Populated lazily from the active project's versions[] every
+        // time the menu is about to show, so it always reflects the
+        // current state.
+        QMenu *openVerMenu = m_menuProject->addMenu(tr("Open Version in New Window"));
+        connect(openVerMenu, &QMenu::aboutToShow, this, [this, openVerMenu]() {
+            openVerMenu->clear();
+            Project *p = activeProject();
+            if (!p) {
+                QAction *a = openVerMenu->addAction(tr("(no active project)"));
+                a->setEnabled(false);
+                return;
+            }
+            QAction *cur = openVerMenu->addAction(tr("Current (working)"));
+            connect(cur, &QAction::triggered, this, [this, p]() {
+                onCloneVersionRequested(p, -1);
+            });
+            if (p->versions.isEmpty()) {
+                QAction *a = openVerMenu->addAction(tr("(no extra versions)"));
+                a->setEnabled(false);
+                return;
+            }
+            openVerMenu->addSeparator();
+            for (int i = 0; i < p->versions.size(); ++i) {
+                const QString lbl = p->versions[i].name.isEmpty()
+                    ? tr("Version %1").arg(i + 1)
+                    : p->versions[i].name;
+                QAction *a = openVerMenu->addAction(lbl);
+                const int idx = i;
+                connect(a, &QAction::triggered, this, [this, p, idx]() {
+                    onCloneVersionRequested(p, idx);
+                });
+            }
+        });
+    }
     m_menuProject->addSeparator();
     m_menuProject->addAction(m_actLinkRom);
     m_menuProject->addAction(m_actImportLinkedVer);
@@ -2563,6 +2606,9 @@ void MainWindow::retranslateUi()
 
     // Sprint C — annotations / markers
     m_menuFind->addSeparator();
+    m_menuFind->addAction(tr("Find &Similar Files…"),
+                          this, &MainWindow::actFindSimilarFiles);
+    m_menuFind->addSeparator();
     m_menuFind->addAction(m_actInsertComment);
     m_menuFind->addAction(m_actInsertMarker);
     m_menuFind->addAction(m_actDeleteComment);
@@ -2588,9 +2634,9 @@ void MainWindow::retranslateUi()
     m_actAutoScanOnLoad = m_menuMisc->addAction(tr("Auto-scan &ROM on import"));
     m_actAutoScanOnLoad->setCheckable(true);
     m_actAutoScanOnLoad->setChecked(
-        QSettings("CT14", "RX14").value("autoDetectMapsOnLoad", true).toBool());
+        rx14::appSettings().value("autoDetectMapsOnLoad", true).toBool());
     connect(m_actAutoScanOnLoad, &QAction::toggled, this, [](bool on) {
-        QSettings("CT14", "RX14").setValue("autoDetectMapsOnLoad", on);
+        rx14::appSettings().setValue("autoDetectMapsOnLoad", on);
     });
     m_menuMisc->addSeparator();
 #endif
@@ -2600,7 +2646,7 @@ void MainWindow::retranslateUi()
         QMenu *autoSaveMenu = m_menuMisc->addMenu(tr("Auto &Save"));
         auto *grp = new QActionGroup(autoSaveMenu);
         grp->setExclusive(true);
-        const QString cur = QSettings("CT14", "RX14")
+        const QString cur = rx14::appSettings()
                                .value("autoSaveMode", "afterDelay").toString();
         auto add = [&](const QString &label, const QString &mode,
                        const QString &tip, QAction **slot) {
@@ -2611,7 +2657,7 @@ void MainWindow::retranslateUi()
             grp->addAction(a);
             connect(a, &QAction::toggled, this, [this, mode](bool on) {
                 if (!on) return;
-                QSettings("CT14", "RX14").setValue("autoSaveMode", mode);
+                rx14::appSettings().setValue("autoSaveMode", mode);
                 if (mode == "off" && m_autoSaveTimer)
                     m_autoSaveTimer->stop();
                 updateAutoSaveStatus();
@@ -2644,7 +2690,7 @@ void MainWindow::retranslateUi()
     };
     auto *langGroup = new QActionGroup(m_menuLang);
     langGroup->setExclusive(true);
-    const QString curLang = QSettings("CT14", "RX14").value("language", "en").toString();
+    const QString curLang = rx14::appSettings().value("language", "en").toString();
     for (const auto &l : langs) {
         auto *a = m_menuLang->addAction(l.label);
         a->setCheckable(true);
@@ -2955,6 +3001,10 @@ void MainWindow::buildToolBars()
 
 QMdiSubWindow *MainWindow::openProject(Project *project)
 {
+    QElapsedTimer __op_t; __op_t.start();
+    auto __step = [&__op_t](const char *what) {
+        qCInfo(catFind) << "  openProject:" << what << __op_t.restart() << "ms";
+    };
     // Re-show existing window if project already loaded
     for (auto *sub : m_mdi->subWindowList()) {
         auto *pv = qobject_cast<ProjectView *>(sub->widget());
@@ -2970,6 +3020,7 @@ QMdiSubWindow *MainWindow::openProject(Project *project)
 
     auto *view = new ProjectView();
     view->loadProject(project);
+    __step("loadProject");
 
     auto *sw = m_mdi->addSubWindow(view);
     sw->setAttribute(Qt::WA_DeleteOnClose, false);
@@ -2977,11 +3028,14 @@ QMdiSubWindow *MainWindow::openProject(Project *project)
     sw->setWindowTitle(project->fullTitle());
     sw->resize(920, 640);
     sw->show();
+    __step("addSubWindow+show");
 
     connect(view, &ProjectView::mapActivated,
             this, &MainWindow::onMapActivated);
     connect(view, &ProjectView::statusMessage,
             this, &MainWindow::onStatusMessage);
+    connect(view, &ProjectView::cloneVersionRequested,
+            this, &MainWindow::onCloneVersionRequested);
     connect(project, &Project::dataChanged, this, [this, sw, project]() {
         sw->setWindowTitle(project->modified
             ? project->fullTitle() + "  *"
@@ -3058,10 +3112,14 @@ QMdiSubWindow *MainWindow::openProject(Project *project)
 
     // Inherit current "Diff vs Original" overlay state — Sprint B.
     view->setShowOriginalDiffOverlay(m_showOriginalDiff);
+    __step("connect+overlay");
 
     refreshProjectTree();
+    __step("refreshProjectTree");
     refreshRecentMapsStrip();
+    __step("refreshRecentMapsStrip");
     broadcastAvailableProjects();
+    __step("broadcastAvailableProjects");
 
     // Mark this project for full group-expansion on the next tree rebuild.
     // refreshProjectTreeNow() consumes the flag so the FIRST rebuild after
@@ -4320,7 +4378,7 @@ void MainWindow::buildWelcomePage()
 
     auto *helpBtn = makeTopBarIconBtn(
         QStringLiteral("?"), tr("Help"), []() {
-            QString lang = QSettings("CT14", "RX14").value("language", "en").toString();
+            QString lang = rx14::appSettings().value("language", "en").toString();
             if (lang == QLatin1String("zh_CN") || lang == QLatin1String("zh"))
                 lang = QStringLiteral("zh");
             QDesktopServices::openUrl(QUrl(
@@ -4539,7 +4597,7 @@ void MainWindow::buildWelcomePage()
                      [this]() { ConfigDialog dlg(this); dlg.exec(); }});
     tiles.push_back({QStringLiteral("\U0001F4DA"), tr("Documentation"),
                      []() {
-                         QString lang = QSettings("CT14", "RX14")
+                         QString lang = rx14::appSettings()
                              .value("language", "en").toString();
                          if (lang == QLatin1String("zh_CN")
                              || lang == QLatin1String("zh"))
@@ -5176,6 +5234,9 @@ void MainWindow::updateCentralPage()
 
 void MainWindow::refreshProjectTreeNow()
 {
+    QElapsedTimer __rpt; __rpt.start();
+    qCInfo(catFind) << "refreshProjectTreeNow start; projects="
+                    << m_projects.size();
     // ── Save expand-state for EVERY level of the tree, not just two
     // levels.  Old code captured only top-level groups + their direct
     // children, so deeper A2L sub-groups (Engine → Fuel → Injection → …)
@@ -5538,6 +5599,7 @@ void MainWindow::refreshProjectTreeNow()
     // Consume the auto-expand intent — only expand on the FIRST rebuild after
     // openProject(); subsequent rebuilds preserve whatever the user has done.
     m_expandAllOnNextBuild.clear();
+    qCInfo(catFind) << "refreshProjectTreeNow done in" << __rpt.elapsed() << "ms";
 }
 
 void MainWindow::applyTreeFilter()
@@ -5642,6 +5704,39 @@ void MainWindow::actProjectManager()
     });
     connect(&dlg, &ProjectManagerDialog::newProjectRequested,
             this, &MainWindow::actNewProject);
+    connect(&dlg, &ProjectManagerDialog::buildSimilarityIndexRequested,
+            this, &MainWindow::actBuildSimilarityIndex);
+    connect(&dlg, &ProjectManagerDialog::openOlsRequested,
+            this, [this](const QString &path) {
+        // Replicate actImportOlsProject minus the QFileDialog.
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly)) {
+            QMessageBox::critical(this, tr("Error"),
+                tr("Cannot open file: %1").arg(path));
+            return;
+        }
+        QByteArray fileData = f.readAll();
+        f.close();
+        ols::OlsImportResult result =
+            ols::OlsImporter::importFromBytes(fileData);
+        if (!result.error.isEmpty()) {
+            QMessageBox::critical(this, tr("Import Error"), result.error);
+            return;
+        }
+        QVector<Project*> projects =
+            ols::buildProjectsFromOlsImport(result, path, this);
+        if (projects.isEmpty()) {
+            QMessageBox::critical(this, tr("Import Error"),
+                tr("No Versions found in WinOLS file."));
+            return;
+        }
+        for (Project *p : projects) {
+            m_projects.append(p);
+            openProject(p);
+        }
+        broadcastAvailableProjects();
+        refreshProjectTree();
+    });
     dlg.exec();
 }
 
@@ -6430,7 +6525,7 @@ void MainWindow::applyDisplayFormat()
 void MainWindow::onSubWindowActivated(QMdiSubWindow *sw)
 {
     // Auto-save mode: onFocusChange — fire when the active sub-window changes.
-    if (QSettings("CT14", "RX14").value("autoSaveMode", "afterDelay")
+    if (rx14::appSettings().value("autoSaveMode", "afterDelay")
             .toString() == "onFocusChange") {
         autoSaveAll();
     }
@@ -6737,6 +6832,215 @@ void MainWindow::onStatusMessage(const QString &msg)
     statusBar()->showMessage(msg);
 }
 
+void MainWindow::actBuildSimilarityIndex()
+{
+    auto *cfg = new winols::Config();
+    QStringList roots = cfg->scanFallback();
+
+    // First-run convenience: auto-import paths from ols.cfg if user
+    // hasn't configured any roots yet.  Same logic ProjectManagerDlg
+    // uses on its WinOLS tab.
+    if (roots.isEmpty()) {
+        const auto found = winols::OlsCfgParser::extractScanRoots();
+        if (!found.isEmpty()) {
+            cfg->setScanFallback(found);
+            roots = found;
+        }
+    }
+    // dbRoots may also contain Cache_*.db's parent dir which often
+    // sits next to the actual .ols folders — include them as scan
+    // candidates too.
+    for (const QString &r : cfg->dbRoots()) {
+        if (!roots.contains(r)) roots << r;
+    }
+
+    if (roots.isEmpty()) {
+        QMessageBox::warning(this, tr("Similarity index"),
+            tr("No scan roots configured.\n\nOpen Project Manager "
+               "→ WinOLS Catalog → Settings to import paths from "
+               "WinOLS' ols.cfg first."));
+        delete cfg;
+        return;
+    }
+
+    // Confirmation: list the roots, total file count estimate, ETA.
+    QString rootsList;
+    for (const QString &r : roots) rootsList += "  " + r + "\n";
+    auto reply = QMessageBox::question(this, tr("Build similarity index"),
+        tr("Scan the following %1 folder(s) recursively for .ols / "
+           ".kp / .bin / .rom files and build the similarity index?\n\n"
+           "%2\n"
+           "This may take a while (potentially hours for terabyte "
+           "collections).  You can pause or cancel at any point — "
+           "already-processed files are kept.")
+            .arg(roots.size())
+            .arg(rootsList),
+        QMessageBox::Ok | QMessageBox::Cancel,
+        QMessageBox::Ok);
+    if (reply != QMessageBox::Ok) {
+        delete cfg;
+        return;
+    }
+
+    auto *idx = new winols::SimilarityIndex(this);
+    QString err;
+    if (!idx->open(&err)) {
+        QMessageBox::critical(this, tr("Similarity index"),
+            tr("Could not open index database:\n%1").arg(err));
+        delete idx;
+        delete cfg;
+        return;
+    }
+    winols::BuildIndexProgressDlg dlg(idx, roots, this);
+    dlg.exec();
+    delete idx;
+    delete cfg;
+    statusBar()->showMessage(tr("Similarity index ready"), 4000);
+}
+
+void MainWindow::actFindSimilarFiles()
+{
+    Project *p = activeProject();
+    if (!p || p->currentData.isEmpty()) {
+        statusBar()->showMessage(
+            tr("Open a project first to find similar files."), 4000);
+        return;
+    }
+    // Compare against originalData if it differs from currentData
+    // (a virgin / un-edited ROM gives the cleanest fingerprint), but
+    // fall back to currentData if the project has no separate baseline.
+    const QByteArray &needleBytes = !p->originalData.isEmpty()
+        ? p->originalData : p->currentData;
+    auto *dlg = new winols::SimilarFilesDlg(
+        p->filePath.isEmpty() ? p->name : p->filePath, needleBytes, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &winols::SimilarFilesDlg::openSimilarRequested,
+            this, [this](const QString &path) {
+        qCInfo(catFind) << "openSimilarRequested path=" << path;
+        QElapsedTimer total; total.start();
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly)) {
+            qCWarning(catFind) << "  cannot open file:" << f.errorString();
+            QMessageBox::warning(this, tr("Open similar"),
+                tr("Could not read file: %1").arg(f.errorString()));
+            return;
+        }
+        QElapsedTimer step; step.start();
+        QByteArray fileData = f.readAll();
+        f.close();
+        qCInfo(catFind) << "  read" << fileData.size() << "B in"
+                        << step.elapsed() << "ms";
+
+        step.restart();
+        ols::OlsImportResult result;
+        try {
+            result = ols::OlsImporter::importFromBytes(fileData);
+        } catch (const std::exception &e) {
+            qCCritical(catFind) << "  importFromBytes threw:" << e.what();
+            QMessageBox::critical(this, tr("Import error"),
+                tr("OLS import threw: %1").arg(QString::fromUtf8(e.what())));
+            return;
+        } catch (...) {
+            qCCritical(catFind) << "  importFromBytes threw unknown";
+            QMessageBox::critical(this, tr("Import error"),
+                tr("OLS import threw an unknown exception"));
+            return;
+        }
+        qCInfo(catFind) << "  importFromBytes done in" << step.elapsed()
+                        << "ms; error=" << result.error
+                        << " warnings=" << result.warnings.size()
+                        << " versions=" << result.versions.size();
+        if (!result.error.isEmpty()) {
+            QMessageBox::critical(this, tr("Import error"), result.error);
+            return;
+        }
+        step.restart();
+        QVector<Project*> projects =
+            ols::buildProjectsFromOlsImport(result, path, this);
+        qCInfo(catFind) << "  buildProjectsFromOlsImport in"
+                        << step.elapsed() << "ms →"
+                        << projects.size() << "projects";
+        for (Project *p : projects) {
+            m_projects.append(p);
+            QElapsedTimer t; t.start();
+            openProject(p);
+            qCInfo(catFind) << "  openProject in" << t.elapsed()
+                            << "ms (project mapCount="
+                            << p->maps.size() << ")";
+        }
+        // openProject() already runs broadcastAvailableProjects() + refreshProjectTree()
+        // internally; calling them again here is redundant and just slows the open.
+        qCInfo(catFind) << "openSimilarRequested done; total="
+                        << total.elapsed() << "ms";
+    });
+    dlg->show();
+    dlg->raise();
+    dlg->activateWindow();
+}
+
+void MainWindow::onCloneVersionRequested(Project *parent, int versionIndex)
+{
+    if (!parent) return;
+
+    // Snapshot bytes for the chosen version.  versionIndex == -1 means
+    // "current working copy" (Project::currentData).  Anything >= 0
+    // indexes into Project::versions[].
+    QByteArray bytes;
+    QString    label;
+    if (versionIndex < 0) {
+        bytes = parent->currentData;
+        label = tr("Current");
+    } else if (versionIndex < parent->versions.size()) {
+        const auto &v = parent->versions[versionIndex];
+        bytes = v.data;
+        label = v.name.isEmpty()
+                  ? tr("Version %1").arg(versionIndex + 1) : v.name;
+    } else {
+        QMessageBox::warning(this, tr("Open version"),
+            tr("Version index %1 out of range").arg(versionIndex));
+        return;
+    }
+    if (bytes.isEmpty()) {
+        QMessageBox::warning(this, tr("Open version"),
+            tr("That version has no ROM data."));
+        return;
+    }
+
+    // Build an ephemeral sibling Project mirroring the parent's
+    // metadata but with the chosen version's bytes as currentData.
+    // No filePath -> autosave will not overwrite the parent's file;
+    // user can Save As to persist.
+    auto *clone = new Project(this);
+    clone->name           = parent->name + QStringLiteral(" — ") + label;
+    clone->brand          = parent->brand;
+    clone->model          = parent->model;
+    clone->vehicleType    = parent->vehicleType;
+    clone->ecuType        = parent->ecuType;
+    clone->ecuProducer    = parent->ecuProducer;
+    clone->ecuSwNumber    = parent->ecuSwNumber;
+    clone->ecuNrEcu       = parent->ecuNrEcu;
+    clone->ecuNrProd      = parent->ecuNrProd;
+    clone->year           = parent->year;
+    clone->byteOrder      = parent->byteOrder;
+    clone->baseAddress    = parent->baseAddress;
+    clone->createdAt      = QDateTime::currentDateTime();
+    clone->createdBy      = parent->createdBy;
+    clone->maps           = parent->maps;
+    clone->groups         = parent->groups;
+    clone->a2lContent     = parent->a2lContent;
+    clone->starredMaps    = parent->starredMaps;
+    clone->currentData    = bytes;
+    clone->originalData   = bytes;     // each clone is its own baseline
+    clone->modified       = false;
+
+    m_projects.append(clone);
+    openProject(clone);
+    broadcastAvailableProjects();
+    refreshProjectTree();
+    statusBar()->showMessage(
+        tr("Opened %1 alongside %2").arg(label, parent->name), 5000);
+}
+
 void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int)
 {
     // Version-snapshot click → ask to restore that version in the owning
@@ -7013,118 +7317,123 @@ void MainWindow::actAutoDetectMaps()
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-bool MainWindow::eventFilter(QObject *obj, QEvent *ev)
+// Cleanup helper invoked AFTER Qt's close-event flow has unwound.
+// Doing model mutation (m_projects.removeAll, refreshProjectTree, ...) inside
+// the event filter left MDI in an inconsistent state during its post-close
+// resize/relayout pass — signals fired with widgets we'd already cut from
+// m_projects, producing access violations.  Deferring via QTimer::singleShot(0)
+// puts this work on the next event-loop turn, after MDI is done.
+void MainWindow::finalizeClosedProject(Project *p)
 {
-    if (ev->type() == QEvent::Close) {
-        auto *sw = qobject_cast<QMdiSubWindow *>(obj);
-        if (sw) {
-            auto *pv   = qobject_cast<ProjectView *>(sw->widget());
-            Project *proj = pv ? pv->project() : nullptr;
-            if (proj) {
-                // ── Helper: fully remove a project + its overlays + children ──
-                auto removeProject = [this](Project *p) {
-                    m_projects.removeAll(p);
-                    m_recentMaps.removeIf([p](const QPair<Project *, QString> &e) {
-                        return e.first == p;
-                    });
-                    // Close overlays belonging to this project
-                    QList<OverlayKey> toRemove;
-                    for (auto it = m_overlays.begin(); it != m_overlays.end(); ++it) {
-                        if (it.key().first == p) toRemove.append(it.key());
-                    }
-                    for (const auto &k : toRemove) {
-                        { auto ov = m_overlays.value(k); if (ov) ov->close(); }
-                        m_overlays.remove(k);
-                    }
-                    // If this is a parent, also close any still-open linked-ROM children
-                    if (!p->isLinkedRom) {
-                        QVector<Project *> children;
-                        for (Project *c : m_projects) {
-                            if (c->isLinkedRom && c->parentProject == p)
-                                children.append(c);
-                        }
-                        for (Project *c : children) {
-                            m_projects.removeAll(c);
-                            // Close child MDI subwindows
-                            for (auto *csw : m_mdi->subWindowList()) {
-                                auto *cpv = qobject_cast<ProjectView *>(csw->widget());
-                                if (cpv && cpv->project() == c) {
-                                    csw->removeEventFilter(this);
-                                    csw->setAttribute(Qt::WA_DeleteOnClose, true);
-                                    csw->close();
-                                }
-                            }
-                            c->deleteLater();
-                        }
-                    }
-                    p->deleteLater();
-                };
-
-                // Unmodified project (or linked ROM) → close silently, no prompt
-                if (!proj->modified) {
-                    removeProject(proj);
-                    sw->removeEventFilter(this);
-                    refreshProjectTree();
-                    refreshRecentMapsStrip();
-                    broadcastAvailableProjects();
-                    QTimer::singleShot(0, sw, [sw]() {
-                        sw->setAttribute(Qt::WA_DeleteOnClose, true);
-                        sw->close();
-                    });
-                    ev->ignore();
-                    return true;
+    if (!p) return;
+    qCInfo(catFind) << "finalizeClosedProject:" << p->name;
+    m_projects.removeAll(p);
+    m_recentMaps.removeIf([p](const QPair<Project *, QString> &e) {
+        return e.first == p;
+    });
+    // Close overlays belonging to this project
+    QList<OverlayKey> toRemove;
+    for (auto it = m_overlays.begin(); it != m_overlays.end(); ++it) {
+        if (it.key().first == p) toRemove.append(it.key());
+    }
+    for (const auto &k : toRemove) {
+        { auto ov = m_overlays.value(k); if (ov) ov->close(); }
+        m_overlays.remove(k);
+    }
+    // If this is a parent, also close any still-open linked-ROM children
+    if (!p->isLinkedRom) {
+        QVector<Project *> children;
+        for (Project *c : m_projects) {
+            if (c->isLinkedRom && c->parentProject == p)
+                children.append(c);
+        }
+        for (Project *c : children) {
+            m_projects.removeAll(c);
+            for (auto *csw : m_mdi->subWindowList()) {
+                auto *cpv = qobject_cast<ProjectView *>(csw->widget());
+                if (cpv && cpv->project() == c) {
+                    csw->removeEventFilter(this);
+                    csw->setAttribute(Qt::WA_DeleteOnClose, true);
+                    csw->close();
                 }
-
-                // Modified project → prompt
-                QMessageBox mb(this);
-                mb.setWindowTitle(tr("Close Project"));
-                mb.setText(QString("<b>%1</b>").arg(proj->fullTitle()));
-                mb.setInformativeText(tr("This project has unsaved changes."));
-                auto *btnSave    = mb.addButton(tr("Save & Close"),         QMessageBox::AcceptRole);
-                auto *btnDiscard = mb.addButton(tr("Close without saving"), QMessageBox::DestructiveRole);
-                mb.addButton(QMessageBox::Cancel);
-                mb.exec();
-
-                if (mb.clickedButton() == btnSave) {
-                    if (proj->filePath.isEmpty()) {
-                        QString path = QFileDialog::getSaveFileName(
-                            this, tr("Save Project As"),
-                            ProjectRegistry::defaultProjectDir() + "/" + suggestedProjectBasename(proj) + ".rx14proj",
-                            tr("RX14 Projects (*.rx14proj);;All Files (*)"));
-                        if (path.isEmpty()) { ev->ignore(); return true; }
-                        proj->saveAs(path);
-                        ProjectRegistry::instance().registerProject(path, proj);
-                    } else {
-                        proj->save();
-                        ProjectRegistry::instance().registerProject(proj->filePath, proj);
-                    }
-                    removeProject(proj);
-                    sw->removeEventFilter(this);
-                    refreshProjectTree();
-                    refreshRecentMapsStrip();
-                    broadcastAvailableProjects();
-                    QTimer::singleShot(0, sw, [sw]() {
-                        sw->setAttribute(Qt::WA_DeleteOnClose, true);
-                        sw->close();
-                    });
-                } else if (mb.clickedButton() == btnDiscard) {
-                    removeProject(proj);
-                    sw->removeEventFilter(this);
-                    refreshProjectTree();
-                    refreshRecentMapsStrip();
-                    broadcastAvailableProjects();
-                    QTimer::singleShot(0, sw, [sw]() {
-                        sw->setAttribute(Qt::WA_DeleteOnClose, true);
-                        sw->close();
-                    });
-                }
-                // Cancel → do nothing, swallow the event
-                ev->ignore();
-                return true;
             }
+            c->deleteLater();
         }
     }
-    return QMainWindow::eventFilter(obj, ev);
+    p->deleteLater();
+    refreshProjectTree();
+    refreshRecentMapsStrip();
+    broadcastAvailableProjects();
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *ev)
+{
+    if (ev->type() != QEvent::Close)
+        return QMainWindow::eventFilter(obj, ev);
+    auto *sw = qobject_cast<QMdiSubWindow *>(obj);
+    if (!sw)
+        return QMainWindow::eventFilter(obj, ev);
+    auto *pv = qobject_cast<ProjectView *>(sw->widget());
+    Project *proj = pv ? pv->project() : nullptr;
+    qCInfo(catFind) << "subwindow close: project="
+                    << (proj ? proj->name : QStringLiteral("(none)"))
+                    << " modified="
+                    << (proj ? proj->modified : false)
+                    << " openCount=" << m_projects.size();
+    if (!proj)
+        return QMainWindow::eventFilter(obj, ev);
+
+    // Modified project → ask the user before letting Qt close the window.
+    // The save / discard / cancel dialog is synchronous; everything below
+    // deferred to a singleShot.
+    if (proj->modified) {
+        QMessageBox mb(this);
+        mb.setWindowTitle(tr("Close Project"));
+        mb.setText(QString("<b>%1</b>").arg(proj->fullTitle()));
+        mb.setInformativeText(tr("This project has unsaved changes."));
+        auto *btnSave    = mb.addButton(tr("Save & Close"),         QMessageBox::AcceptRole);
+        auto *btnDiscard = mb.addButton(tr("Close without saving"), QMessageBox::DestructiveRole);
+        auto *btnCancel  = mb.addButton(QMessageBox::Cancel);
+        mb.exec();
+
+        if (mb.clickedButton() == btnCancel) {
+            ev->ignore();   // user cancelled — keep the window open
+            return true;
+        }
+        if (mb.clickedButton() == btnSave) {
+            if (proj->filePath.isEmpty()) {
+                QString path = QFileDialog::getSaveFileName(
+                    this, tr("Save Project As"),
+                    ProjectRegistry::defaultProjectDir() + "/" +
+                        suggestedProjectBasename(proj) + ".rx14proj",
+                    tr("RX14 Projects (*.rx14proj);;All Files (*)"));
+                if (path.isEmpty()) { ev->ignore(); return true; }
+                proj->saveAs(path);
+                ProjectRegistry::instance().registerProject(path, proj);
+            } else {
+                proj->save();
+                ProjectRegistry::instance().registerProject(proj->filePath, proj);
+            }
+        }
+        // btnDiscard or post-save: fall through to deferred close
+    }
+
+    // Detach from this subwindow so we don't re-enter once Qt resumes
+    // delivering the close event.  WA_DeleteOnClose makes Qt destroy the
+    // subwindow when its close completes.
+    sw->removeEventFilter(this);
+    sw->setAttribute(Qt::WA_DeleteOnClose, true);
+
+    // Defer model cleanup to the next event-loop turn — see comment on
+    // finalizeClosedProject().  QPointer guards against the project being
+    // taken down by some other path before our timer fires.
+    QPointer<Project> projPtr(proj);
+    QTimer::singleShot(0, this, [this, projPtr]() {
+        if (projPtr)
+            finalizeClosedProject(projPtr.data());
+    });
+
+    return false;  // pass-through: let Qt actually close the subwindow
 }
 
 ProjectView *MainWindow::activeView() const
@@ -7629,7 +7938,7 @@ void MainWindow::scheduleAutoSave()
     // Update the status indicator immediately so the user sees "Modified"
     // the moment they make a change, before the debounced save fires.
     updateAutoSaveStatus();
-    const QString mode = QSettings("CT14", "RX14")
+    const QString mode = rx14::appSettings()
                             .value("autoSaveMode", "afterDelay").toString();
     if (mode == "afterDelay")
         m_autoSaveTimer->start();   // debounce each call
@@ -8042,7 +8351,7 @@ void MainWindow::actShowCommandPalette()
                             m_menuLang->exec(QCursor::pos());
                     } else if (id == QStringLiteral("autosave")) {
                         // Cycle: Off → AfterDelay → OnFocusChange → OnWindowDeactivate
-                        const QString cur = QSettings("CT14", "RX14")
+                        const QString cur = rx14::appSettings()
                             .value("autoSaveMode", "afterDelay").toString();
                         QAction *next = m_actAutoSaveDelay;
                         if      (cur == "off")                next = m_actAutoSaveDelay;
@@ -8139,7 +8448,7 @@ void MainWindow::onEditOpRequestedFromView(int code)
 void MainWindow::onToggleDiffOriginal(bool on)
 {
     m_showOriginalDiff = on;
-    QSettings("CT14", "romHEX14").setValue("view/showOriginalDiff", on);
+    rx14::appSettings().setValue("view/showOriginalDiff", on);
     // Propagate to every open ProjectView so hex / waveform / 3D each
     // pick up the flag and repaint.
     for (auto *sub : m_mdi->subWindowList()) {

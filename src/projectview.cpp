@@ -10,6 +10,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QInputDialog>
+#include <QMenu>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
@@ -124,6 +125,42 @@ ProjectView::ProjectView(QWidget *parent)
     connect(m_versionCombo,
             QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ProjectView::onVersionChanged);
+
+    // Sprint H: right-click the Version combo to open any version
+    // (incl. "Current") side-by-side in a new MDI subwindow.
+    m_versionCombo->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_versionCombo, &QWidget::customContextMenuRequested,
+            this, [this](const QPoint &pos) {
+        if (!m_project) return;
+        QMenu menu(m_versionCombo);
+        menu.setStyleSheet(
+            "QMenu { background:#21262d; color:#e6edf3; "
+            "  border:1px solid #30363d; }"
+            "QMenu::item:selected { background:#1f6feb; }");
+        // -1 == Current (working).  0..N-1 map onto Project::versions[i].
+        const int n = m_project->versions.size();
+        if (n > 0) {
+            menu.addAction(tr("Open \"Current (working)\" in new window"),
+                           this, [this]() {
+                emit cloneVersionRequested(m_project, -1);
+            });
+            menu.addSeparator();
+            for (int i = 0; i < n; ++i) {
+                const QString lbl = m_project->versions[i].name.isEmpty()
+                    ? tr("Version %1").arg(i + 1)
+                    : m_project->versions[i].name;
+                const int idx = i;
+                menu.addAction(tr("Open \"%1\" in new window").arg(lbl),
+                               this, [this, idx]() {
+                    emit cloneVersionRequested(m_project, idx);
+                });
+            }
+        } else {
+            QAction *a = menu.addAction(tr("(no extra versions)"));
+            a->setEnabled(false);
+        }
+        menu.exec(m_versionCombo->mapToGlobal(pos));
+    });
 
     connect(m_btnAddVer, &QPushButton::clicked, this, &ProjectView::onAddVersion);
 

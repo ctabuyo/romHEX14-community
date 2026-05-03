@@ -6,16 +6,19 @@
 
 #include "diffpanel.h"
 
+#include "debug/DebugLog.h"
 #include "project.h"
 
 #include <QAbstractItemView>
 #include <QBrush>
 #include <QColor>
 #include <QComboBox>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QKeyEvent>
+#include <QShowEvent>
 #include <QLabel>
 #include <QPushButton>
 #include <QRadioButton>
@@ -501,6 +504,13 @@ void DiffPanel::onResetAlignment()
     emit alignmentChanged();
 }
 
+void DiffPanel::showEvent(QShowEvent *e)
+{
+    QWidget::showEvent(e);
+    if (m_recomputePending)
+        recompute();
+}
+
 void DiffPanel::keyPressEvent(QKeyEvent *e)
 {
     // Arrow keys nudge B's offset (the typical case).  Hold Shift for C.
@@ -575,6 +585,17 @@ QString DiffPanel::formatDelta(quint32 a, quint32 b) const
 
 void DiffPanel::recompute()
 {
+    // Defer expensive work while the panel is hidden.  Project list changes
+    // (open / close / save / data edits) all funnel through here, and a full
+    // byte-scan of two multi-MB ROMs blocks the UI thread for seconds.  When
+    // the user actually shows the panel, showEvent() picks up m_recomputePending
+    // and runs us once.
+    if (!isVisible()) {
+        m_recomputePending = true;
+        return;
+    }
+    m_recomputePending = false;
+
     m_table->setRowCount(0);
     m_btnCopySel->setEnabled(false);
     m_btnCopyAll->setEnabled(false);
@@ -604,19 +625,29 @@ void DiffPanel::recompute()
         return;
     }
 
+    QElapsedTimer __t; __t.start();
+
+    // QTableWidget bogs down past ~50k rows (each row = 4 QTableWidgetItem
+    // allocations + 4 model signals).  Two unrelated ROMs can produce
+    // millions of byte-level diffs, which would freeze the UI for tens of
+    // seconds.  Cap what we display; the summary line tells the user the
+    // real total.
+    constexpr int kMaxDisplayRows = 50000;
+
     const int sz = wordSize();
     QVector<qint64>  diffAddrs;
     QVector<quint32> diffA, diffB;
     QVector<DiffSign> diffSign;
-    diffAddrs.reserve(2048);
-    diffA.reserve(2048);
-    diffB.reserve(2048);
-    diffSign.reserve(2048);
+    diffAddrs.reserve(kMaxDisplayRows);
+    diffA.reserve(kMaxDisplayRows);
+    diffB.reserve(kMaxDisplayRows);
+    diffSign.reserve(kMaxDisplayRows);
 
-    // Walk every region of A.  Within each region, both A and B addresses
-    // step in lock-step (delta is fixed per region).  Bytes outside any
-    // region are not compared — that's the point of having a piecewise
-    // alignment.
+    // Total scan: counts every diff even past the display cap, so the
+    // summary line shows the full picture.
+    qint64 totalDiffs = 0;
+    bool capped = false;
+
     for (const AlignRegion &reg : amap->regions()) {
         const qint64 aStart = reg.rangeAStart;
         const qint64 aEnd   = qMin<qint64>(reg.rangeAStart + reg.length, da.size());
@@ -625,6 +656,11 @@ void DiffPanel::recompute()
             if (bi < 0 || bi + sz > db.size()) continue;
             if (std::memcmp(da.constData() + ai, db.constData() + bi, sz) == 0)
                 continue;
+            ++totalDiffs;
+            if (diffAddrs.size() >= kMaxDisplayRows) {
+                capped = true;
+                continue;
+            }
             const quint32 va = readWord(da, ai);
             const quint32 vb = readWord(db, bi);
             diffAddrs.append(ai);
@@ -633,6 +669,7 @@ void DiffPanel::recompute()
             diffSign.append(classify(va, vb, sz, m_isSigned));
         }
     }
+    const qint64 walkMs = __t.restart();
 
     m_table->setUpdatesEnabled(false);
     m_table->setRowCount(diffAddrs.size());
@@ -653,10 +690,6 @@ void DiffPanel::recompute()
         iB->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
         iD->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-        // Severity color applied to text (foreground).  Address column
-        // stays neutral so the user can still pick out the address quickly
-        // — it's the value cells that carry the "how big is this diff"
-        // information.
         iA->setForeground(fg);
         iB->setForeground(fg);
         iD->setForeground(fg);
@@ -667,12 +700,24 @@ void DiffPanel::recompute()
         m_table->setItem(row, 3, iD);
     }
     m_table->setUpdatesEnabled(true);
+    qCInfo(catFind) << "DiffPanel::recompute walk=" << walkMs
+                    << "ms populate=" << __t.elapsed()
+                    << "ms diffs=" << totalDiffs
+                    << " shown=" << diffAddrs.size();
 
-    if (diffAddrs.isEmpty()) {
+    if (totalDiffs == 0) {
         m_summary->setText(tr("No differences"));
     } else {
-        QString txt = tr("%1 differences  (word size: %2)")
-                          .arg(diffAddrs.size()).arg(sz);
+        QString txt;
+        if (capped) {
+            txt = tr("%1 differences  (showing first %2 — word size %3)")
+                      .arg(totalDiffs)
+                      .arg(diffAddrs.size())
+                      .arg(sz);
+        } else {
+            txt = tr("%1 differences  (word size: %2)")
+                      .arg(totalDiffs).arg(sz);
+        }
         if (amap->isGlobal()
             && (amap->globalDeltaB() != 0 || amap->globalDeltaC() != 0)) {
             txt += tr("   ·   ΔB=%1, ΔC=%2")

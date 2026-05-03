@@ -5,6 +5,7 @@
  */
 
 #include "mappropertiesdlg.h"
+#include "appconstants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -139,13 +140,13 @@ MapPropertiesDialog::MapPropertiesDialog(const MapInfo &map, ByteOrder byteOrder
     populateAxis(false);
     populateComment();
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/MapPropertiesDlg").toByteArray());
 }
 
 void MapPropertiesDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/MapPropertiesDlg", saveGeometry());
     QDialog::closeEvent(event);
 }

@@ -116,6 +116,7 @@ private slots:
 
 protected:
     void keyPressEvent(QKeyEvent *e) override;
+    void showEvent(QShowEvent *e) override;
 
 private:
     void buildUi();
@@ -142,6 +143,10 @@ private:
     ByteOrder m_byteOrder   = ByteOrder::BigEndian;
     int       m_displayFmt  = 1;     // 0=dec 1=hex 2=bin 3=pct (we use hex by default)
     bool      m_isSigned    = false;
+
+    // recompute() is expensive (full byte scan + per-cell QTableWidgetItem).
+    // We skip it when the panel is hidden and rerun on first showEvent.
+    bool      m_recomputePending = false;
 
     // Per-pair alignment maps, keyed by ordered (A*,B*) pointers so the
     // user's manual offsets persist across A/B picker swaps within one

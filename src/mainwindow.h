@@ -170,6 +170,17 @@ private slots:
     void onSubWindowActivated(QMdiSubWindow *sw);
     void onMapActivated(const MapInfo &map, Project *project);
     void onStatusMessage(const QString &msg);
+    void onCloneVersionRequested(Project *parent, int versionIndex);
+    /// Sprint I — open Find Similar Files dialog using the active
+    /// project's currentData (or originalData if available) as the
+    /// query.  Falls back to a status-bar message if no project open.
+    void actFindSimilarFiles();
+    /// Sprint I — explicit "Index WinOLS catalog now" entry that
+    /// runs the full fingerprint scan over every configured scan
+    /// root.  Useful when user wants to build the index without
+    /// first opening a project (the "Find Similar Files" entry
+    /// requires an active project for the query side).
+    void actBuildSimilarityIndex();
     void onTreeItemClicked(QTreeWidgetItem *item, int col);
     void refreshRecentMapsStrip();
 
@@ -208,6 +219,7 @@ private:
     ProjectView *activeView()    const;
     Project     *activeProject() const;
     void broadcastAvailableProjects();   // push m_projects to all ProjectViews
+    void finalizeClosedProject(Project *p); // deferred cleanup after sub close
     void spawnLinkedRomSubwindowsFor(Project *parent);  // re-open child windows after load
     QSet<Project *> m_expandAllOnNextBuild;             // projects that should auto-expand all map groups on the next tree rebuild
 
