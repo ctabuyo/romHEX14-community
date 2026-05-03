@@ -11,7 +11,10 @@
 #include "debug/DebugLog.h"
 #include "logger.h"
 #include "mainwindow.h"
+#include "io/ols/OlsImporter.h"
 
+#include <QCryptographicHash>
+#include <QFile>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QHostAddress>
@@ -152,6 +155,7 @@ QJsonObject DebugRpc::dispatch(const QJsonObject &request)
     else if (cmd == "bulk_edit")    resp = cmdBulkEdit(args);
     else if (cmd == "undo")         resp = cmdUndo(args);
     else if (cmd == "remove_anno")  resp = cmdRemoveAnno(args);
+    else if (cmd == "dump_ols_rom") resp = cmdDumpOlsRom(args);
     else {
         resp.insert("ok", false);
         resp.insert("error", QStringLiteral("unknown cmd: %1").arg(cmd));
@@ -513,6 +517,7 @@ QJsonObject DebugRpc::cmdMapList(const QJsonObject &args)
     return r;
 }
 
+
 QJsonObject DebugRpc::cmdFindSimilar(const QJsonObject &args)
 {
     QJsonObject r;
@@ -542,6 +547,58 @@ QJsonObject DebugRpc::cmdTail(const QJsonObject &args)
     r.insert("ok", true);
     QJsonObject result;
     result.insert("lines", arr);
+    r.insert("result", result);
+    return r;
+}
+
+// Dumps OlsImporter output for a given .ols/.kp path so we can debug
+// what version 0 actually contains.  Returns:
+//   - error string if parse failed
+//   - n_versions, version[i].name, version[i].rom_size, version[i].sha256_first16
+//   - rawHash16: SHA256[..16] of the raw file bytes (for sanity)
+QJsonObject DebugRpc::cmdDumpOlsRom(const QJsonObject &args)
+{
+    QJsonObject r;
+    QString path = args.value("path").toString();
+    if (path.isEmpty()) {
+        r.insert("ok", false);
+        r.insert("error", "missing 'path'");
+        return r;
+    }
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        r.insert("ok", false);
+        r.insert("error", "cannot open file");
+        return r;
+    }
+    QByteArray fileData = f.readAll();
+    f.close();
+    QByteArray rawHash = QCryptographicHash::hash(fileData, QCryptographicHash::Sha256);
+
+    QJsonObject result;
+    result.insert("file_size", fileData.size());
+    result.insert("raw_sha256_16", QString::fromLatin1(rawHash.toHex().left(32)));
+
+    ols::OlsImportResult res = ols::OlsImporter::importFromBytes(fileData);
+    result.insert("parse_error", res.error);
+    QJsonArray versions;
+    for (int i = 0; i < res.versions.size(); ++i) {
+        const auto &v = res.versions[i];
+        QJsonObject vobj;
+        vobj.insert("index", i);
+        vobj.insert("name", v.name);
+        vobj.insert("rom_size", v.romData.size());
+        QByteArray rh = QCryptographicHash::hash(v.romData, QCryptographicHash::Sha256);
+        vobj.insert("rom_sha256_16", QString::fromLatin1(rh.toHex().left(32)));
+        vobj.insert("rom_first32_hex", QString::fromLatin1(v.romData.left(32).toHex()));
+        // Optional: return the full ROM as base64 for offline analysis.
+        if (args.value("include_bytes").toBool() && i == 0) {
+            vobj.insert("rom_bytes_b64", QString::fromLatin1(v.romData.toBase64()));
+        }
+        versions.append(vobj);
+    }
+    result.insert("versions", versions);
+    r.insert("ok", true);
     r.insert("result", result);
     return r;
 }

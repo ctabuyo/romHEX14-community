@@ -5,6 +5,7 @@
  */
 
 #include "kpimportdlg.h"
+#include "appconstants.h"
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QPushButton>
@@ -157,13 +158,13 @@ KPImportDlg::KPImportDlg(const KPVehicleInfo &info,
     resize(720, 640);
     setStyleSheet(kDialogStyle);
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/KPImportDlg").toByteArray());
 }
 
 void KPImportDlg::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/KPImportDlg", saveGeometry());
     QDialog::closeEvent(event);
 }

@@ -6,6 +6,7 @@
 
 #include "mapoverlay.h"
 #include "appconfig.h"
+#include "appconstants.h"
 #include "mappropertiesdlg.h"
 #include "featuregate.h"
 #ifdef RX14_PRO_BUILD
@@ -480,7 +481,7 @@ MapOverlay::MapOverlay(QWidget *parent)
         m_btnAIExplain->setText(QString::fromUtf8("\xe2\x9c\xa6")); // ✦
 
         // Determine language
-        QString uiLang = QSettings("CT14", "RX14").value("language", "en").toString();
+        QString uiLang = rx14::appSettings().value("language", "en").toString();
         QMap<QString,QString> langMap = {
             {"en","English"}, {"zh","Simplified Chinese"}, {"zh_CN","Simplified Chinese"},
             {"es","Spanish"}, {"th","Thai"}, {"de","German"},

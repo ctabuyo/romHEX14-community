@@ -65,17 +65,38 @@ OlsImportResult OlsImporter::importFromBytes(const QByteArray &fileData)
         fileData, mapRegionStart, mapRegionEnd, schema, &result.warnings);
 
 
+    QStringList versionNames;
+    {
+        const QString &tag = result.metadata.revisionTag;
+        int po = tag.indexOf(QLatin1Char('('));
+        int pc = tag.lastIndexOf(QLatin1Char(')'));
+        if (po >= 0 && pc > po) {
+            QString inner = tag.mid(po + 1, pc - po - 1);
+            QStringList entries = inner.split(QStringLiteral(",\t"), Qt::SkipEmptyParts);
+            if (entries.isEmpty())
+                entries = inner.split(QLatin1Char(','), Qt::SkipEmptyParts);
+            for (const QString &e : entries) {
+                QString s = e.trimmed();
+                int colon = s.indexOf(QStringLiteral(":\t"));
+                if (colon < 0) colon = s.indexOf(QLatin1Char(':'));
+                if (colon > 0) s = s.left(colon).trimmed();
+                if (!s.isEmpty()) versionNames.append(s);
+            }
+        }
+    }
+
     if (!romVersions.isEmpty() && !romVersions[0].error.isEmpty()
         && romVersions.size() == 1) {
         result.warnings.append(romVersions[0].error);
         OlsVersion ver;
-        ver.name = OlsImporter::tr("Default");
+        ver.name = versionNames.value(0, OlsImporter::tr("Default"));
         ver.maps = maps;
         result.versions.append(std::move(ver));
     } else {
         for (auto &rv : romVersions) {
             OlsVersion ver;
-            ver.name = OlsImporter::tr("Version %1").arg(rv.versionIndex);
+            ver.name = versionNames.value(rv.versionIndex,
+                           OlsImporter::tr("Version %1").arg(rv.versionIndex));
             ver.romData = rv.assembledRom;
             ver.segments = rv.segments;
             ver.byteOrder = ByteOrder::LittleEndian;

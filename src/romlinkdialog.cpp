@@ -5,6 +5,7 @@
  */
 
 #include "romlinkdialog.h"
+#include "appconstants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -53,13 +54,13 @@ RomLinkDialog::RomLinkDialog(Project *project, QWidget *parent)
     connect(m_linker, &RomLinker::progress, this, &RomLinkDialog::onProgress);
     connect(m_linker, &RomLinker::finished, this, &RomLinkDialog::onFinished);
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/RomLinkDialog").toByteArray());
 }
 
 void RomLinkDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/RomLinkDialog", saveGeometry());
     QDialog::closeEvent(event);
 }

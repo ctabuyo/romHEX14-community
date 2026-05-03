@@ -5,6 +5,7 @@
  */
 
 #include "newprojectdialog.h"
+#include "appconstants.h"
 #include "vehicledb.h"
 #include <QVBoxLayout>
 #include <QRegularExpression>
@@ -131,13 +132,13 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
     connect(m_model, &QComboBox::currentTextChanged,
             this, &NewProjectDialog::onModelChanged);
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/NewProjectDialog").toByteArray());
 }
 
 void NewProjectDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/NewProjectDialog", saveGeometry());
     QDialog::closeEvent(event);
 }

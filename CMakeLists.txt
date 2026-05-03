@@ -43,7 +43,7 @@ if(NOT DEFINED RX14_DEBUG_RPC_DEFAULT)
 endif()
 option(RX14_DEBUG_RPC "Enable in-app TCP debug RPC + D:\\rx14-debug logging" ${RX14_DEBUG_RPC_DEFAULT})
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Network LinguistTools)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Network Sql LinguistTools)
 find_package(ZLIB QUIET)
 
 # ── BLAKE3 (portable C, no SIMD) ────────────────────────────────────────────
@@ -134,6 +134,14 @@ set(SOURCES
     src/io/MapListExporter.cpp
     src/edit/MapFingerprint.cpp
     src/edit/FindSimilarMapsDlg.cpp
+    src/io/winols/WinOlsCatalogReader.cpp
+    src/io/winols/WinOlsConfig.cpp
+    src/io/winols/WinOlsOpener.cpp
+    src/io/winols/OlsCfgParser.cpp
+    src/io/winols/RomFingerprint.cpp
+    src/io/winols/SimilarityIndex.cpp
+    src/io/winols/SimilarFilesDlg.cpp
+    src/io/winols/BuildIndexProgressDlg.cpp
 )
 
 # ── Debug RPC sources (gated by RX14_DEBUG_RPC) ─────────────────────────────
@@ -213,6 +221,14 @@ set(HEADERS
     src/io/MapListExporter.h
     src/edit/MapFingerprint.h
     src/edit/FindSimilarMapsDlg.h
+    src/io/winols/WinOlsCatalogReader.h
+    src/io/winols/WinOlsConfig.h
+    src/io/winols/WinOlsOpener.h
+    src/io/winols/OlsCfgParser.h
+    src/io/winols/RomFingerprint.h
+    src/io/winols/SimilarityIndex.h
+    src/io/winols/SimilarFilesDlg.h
+    src/io/winols/BuildIndexProgressDlg.h
 )
 
 if(RX14_DEBUG_RPC)
@@ -302,6 +318,7 @@ target_link_libraries(rx14 PRIVATE
     Qt6::Widgets
     Qt6::Concurrent
     Qt6::Network
+    Qt6::Sql
 )
 
 if(RX14_PRO_BUILD)
@@ -331,6 +348,8 @@ if(WIN32)
     if(WIN_RC)
         target_sources(rx14 PRIVATE ${WIN_RC})
     endif()
+    # dbghelp: stack-walk + symbol resolution in windowsExceptionFilter
+    target_link_libraries(rx14 PRIVATE dbghelp)
 elseif(APPLE)
     # macOS app bundle
     set_target_properties(rx14 PROPERTIES

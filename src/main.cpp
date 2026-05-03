@@ -12,9 +12,11 @@
 #include <QDateTime>
 #include <QSharedMemory>
 #include <QRegularExpression>
+#include <atomic>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include "appconstants.h"
 #include "mainwindow.h"
 #include "logger.h"
 #include "version.h"
@@ -22,6 +24,7 @@
 
 #ifdef Q_OS_WIN
 #  include <windows.h>
+#  include <dbghelp.h>
 #endif
 
 // ── Qt message handler ───────────────────────────────────────────────────────
@@ -72,19 +75,143 @@ static void crashHandler(int sig) noexcept
 }
 
 #ifdef Q_OS_WIN
-// Windows Structured Exception Filter — catches access violations, stack overflows, etc.
-static LONG WINAPI windowsExceptionFilter(EXCEPTION_POINTERS *ep)
+// Single guard: VEH and SEH both reach here, but we only want to walk + log
+// once.  Without this, a single SIGSEGV can produce duplicate stack traces.
+static std::atomic<bool> sStackTraceWritten{false};
+
+// Walk the stack using DbgHelp and write each frame (module + offset, plus
+// symbol if PDB is present) to the log.  Called from VEH (runs before SEH
+// translation, so we capture the stack pristine on MinGW where SIGSEGV would
+// otherwise pre-empt our SEH filter).
+static void walkAndLogStack(EXCEPTION_POINTERS *ep, const char *origin)
 {
-    char buf[256];
+    bool expected = false;
+    if (!sStackTraceWritten.compare_exchange_strong(expected, true))
+        return;  // already logged from another handler
+
+    char buf[512];
     snprintf(buf, sizeof(buf),
-             "Unhandled Windows exception code=0x%08lX at addr=%p",
+             "[%s] Exception code=0x%08lX at addr=%p",
+             origin,
              (unsigned long)ep->ExceptionRecord->ExceptionCode,
              ep->ExceptionRecord->ExceptionAddress);
     Logger::instance().writeCrashLine(buf);
+
+    HANDLE proc = GetCurrentProcess();
+    HANDLE thread = GetCurrentThread();
+    SymSetOptions(SymGetOptions() | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS);
+    SymInitialize(proc, nullptr, TRUE);
+
+    CONTEXT *ctx = ep->ContextRecord;
+    STACKFRAME64 frame{};
+    DWORD machineType;
+#ifdef _M_X64
+    machineType         = IMAGE_FILE_MACHINE_AMD64;
+    frame.AddrPC.Offset = ctx->Rip;
+    frame.AddrFrame.Offset = ctx->Rbp;
+    frame.AddrStack.Offset = ctx->Rsp;
+#else
+    machineType         = IMAGE_FILE_MACHINE_I386;
+    frame.AddrPC.Offset = ctx->Eip;
+    frame.AddrFrame.Offset = ctx->Ebp;
+    frame.AddrStack.Offset = ctx->Esp;
+#endif
+    frame.AddrPC.Mode    = AddrModeFlat;
+    frame.AddrFrame.Mode = AddrModeFlat;
+    frame.AddrStack.Mode = AddrModeFlat;
+
+    Logger::instance().writeCrashLine("--- Stack trace ---");
+
+    char symBuf[sizeof(SYMBOL_INFO) + 256];
+    SYMBOL_INFO *sym = reinterpret_cast<SYMBOL_INFO *>(symBuf);
+    sym->SizeOfStruct = sizeof(SYMBOL_INFO);
+    sym->MaxNameLen = 255;
+    IMAGEHLP_LINE64 line{};
+    line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+
+    for (int i = 0; i < 64; ++i) {
+        if (!StackWalk64(machineType, proc, thread, &frame, ctx, nullptr,
+                         SymFunctionTableAccess64, SymGetModuleBase64,
+                         nullptr))
+            break;
+        if (frame.AddrPC.Offset == 0) break;
+
+        DWORD64 addr = frame.AddrPC.Offset;
+        char modBase[MAX_PATH] = "?";
+        DWORD64 modBaseAddr = SymGetModuleBase64(proc, addr);
+        if (modBaseAddr) {
+            char modPath[MAX_PATH];
+            if (GetModuleFileNameA(reinterpret_cast<HMODULE>(modBaseAddr),
+                                   modPath, sizeof(modPath))) {
+                const char *slash = strrchr(modPath, '\\');
+                snprintf(modBase, sizeof(modBase), "%s",
+                         slash ? slash + 1 : modPath);
+            }
+        }
+
+        char symName[256] = "";
+        DWORD64 disp = 0;
+        if (SymFromAddr(proc, addr, &disp, sym)) {
+            snprintf(symName, sizeof(symName), "%s+0x%llx",
+                     sym->Name, (unsigned long long)disp);
+        } else {
+            snprintf(symName, sizeof(symName), "(no symbol)");
+        }
+
+        DWORD lineDisp = 0;
+        char lineInfo[280] = "";
+        if (SymGetLineFromAddr64(proc, addr, &lineDisp, &line)) {
+            const char *slash = strrchr(line.FileName, '\\');
+            snprintf(lineInfo, sizeof(lineInfo), "  [%s:%lu]",
+                     slash ? slash + 1 : line.FileName,
+                     (unsigned long)line.LineNumber);
+        }
+
+        snprintf(buf, sizeof(buf), "  #%2d 0x%016llx %s!%s%s",
+                 i, (unsigned long long)addr, modBase, symName, lineInfo);
+        Logger::instance().writeCrashLine(buf);
+    }
+
+    Logger::instance().writeCrashLine("--- End stack trace ---");
+    SymCleanup(proc);
+}
+
+// Vectored exception handler: runs BEFORE the SEH chain and BEFORE MinGW's
+// signal translator.  This is the only place we can reliably capture the
+// stack on MinGW Windows for access violations / divide-by-zero / etc —
+// the C runtime would otherwise convert these to SIGSEGV / SIGFPE before
+// SetUnhandledExceptionFilter ever fires.
+//
+// We only handle truly fatal exception codes; software-thrown SEH (C++
+// exceptions, Windows messaging) must continue to propagate normally.
+static LONG WINAPI windowsVectoredHandler(EXCEPTION_POINTERS *ep)
+{
+    const DWORD code = ep->ExceptionRecord->ExceptionCode;
+    switch (code) {
+    case EXCEPTION_ACCESS_VIOLATION:
+    case EXCEPTION_STACK_OVERFLOW:
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+    case EXCEPTION_PRIV_INSTRUCTION:
+    case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+        walkAndLogStack(ep, "VEH");
+        break;
+    default:
+        break;
+    }
+    return EXCEPTION_CONTINUE_SEARCH;  // never swallow — let normal flow continue
+}
+
+// Windows Structured Exception Filter — fallback in case VEH was somehow
+// bypassed.  walkAndLogStack() guards against duplicate output.
+static LONG WINAPI windowsExceptionFilter(EXCEPTION_POINTERS *ep)
+{
+    walkAndLogStack(ep, "SEH");
     Logger::instance().writeCrashLine(
         "The application encountered a fatal error. "
         "A crash report has been written to the log file.");
-    return EXCEPTION_CONTINUE_SEARCH;  // let default handler run (generates minidump)
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 #endif
 
@@ -117,6 +244,10 @@ int main(int argc, char *argv[])
     std::signal(SIGFPE,  crashHandler);
     std::signal(SIGILL,  crashHandler);
 #ifdef Q_OS_WIN
+    // Add VEH first — it runs before SEH, before MinGW's signal translation,
+    // so it captures the stack pristine even when SIGSEGV is the apparent
+    // cause of death.  Keep SEH as a safety net.
+    AddVectoredExceptionHandler(/*FirstHandler*/ 1, windowsVectoredHandler);
     SetUnhandledExceptionFilter(windowsExceptionFilter);
 #endif
 
@@ -126,9 +257,40 @@ int main(int argc, char *argv[])
 
     // ── Application ────────────────────────────────────────────────────────
     QApplication app(argc, argv);
-    app.setApplicationName("romHEX14");
-    app.setOrganizationName("CT14");
+    app.setApplicationName(QString::fromUtf8(rx14::kAppName));
+    app.setOrganizationName(QString::fromUtf8(rx14::kOrgName));
     app.setApplicationVersion(RX14_VERSION_STRING);
+
+    // ── Settings migration ─────────────────────────────────────────────────
+    // Pre-2026 builds wrote to CT14/RX14; everything since uses
+    // CT14/romHEX14.  Copy old keys into the new store on first boot
+    // after the upgrade so users don't lose recent files, geometry,
+    // language, autosave preferences, etc.  Idempotent via a flag.
+    {
+        QSettings dest(QString::fromUtf8(rx14::kOrgName),
+                       QString::fromUtf8(rx14::kAppName));
+        const QString flag = QStringLiteral("internal/legacyMigrated");
+        if (!dest.value(flag, false).toBool()) {
+            QSettings src(QString::fromUtf8(rx14::kOrgName),
+                          QString::fromUtf8(rx14::kLegacyAppName));
+            const QStringList keys = src.allKeys();
+            int copied = 0;
+            for (const QString &k : keys) {
+                if (dest.contains(k)) continue;     // never clobber
+                dest.setValue(k, src.value(k));
+                ++copied;
+            }
+            dest.setValue(flag, true);
+            dest.sync();
+            if (copied > 0)
+                Logger::instance().log(Logger::Info,
+                    QStringLiteral("Migrated %1 legacy QSettings keys "
+                                   "from CT14/%2 to CT14/%3")
+                        .arg(copied)
+                        .arg(QString::fromUtf8(rx14::kLegacyAppName))
+                        .arg(QString::fromUtf8(rx14::kAppName)));
+        }
+    }
 
     // ── Single instance check ───────────────────────────────────────────
     QSharedMemory singleLock("romHEX14_SingleInstance_Lock");

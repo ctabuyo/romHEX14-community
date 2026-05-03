@@ -67,6 +67,7 @@ private:
     QJsonObject cmdBulkEdit(const QJsonObject &args);
     QJsonObject cmdUndo(const QJsonObject &args);
     QJsonObject cmdRemoveAnno(const QJsonObject &args);
+    QJsonObject cmdDumpOlsRom(const QJsonObject &args);
 
     MainWindow *m_mw = nullptr;
     QTcpServer *m_server = nullptr;

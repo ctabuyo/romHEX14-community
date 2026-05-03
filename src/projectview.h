@@ -59,6 +59,15 @@ signals:
     void statusMessage(const QString &msg);
     void viewSwitched(int index);   // emitted when user changes tab (0=Text 1=2D 2=3D)
 
+    /// Sprint H: user right-clicked the version combo and asked to open
+    /// a specific version in a separate MDI subwindow (side-by-side view).
+    /// @p versionIndex follows ProjectView convention:
+    ///   -1  → "Current (working)" (Project::currentData)
+    ///    0  → first ProjectVersion snapshot (Project::versions[0])
+    ///    n  → Project::versions[n]
+    /// MainWindow clones the project, swaps currentData, opens new window.
+    void cloneVersionRequested(Project *project, int versionIndex);
+
 public slots:
     void switchView(int index); // 0=Text/Hex  1=2D/Waveform  2=3D
 

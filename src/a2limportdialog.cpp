@@ -5,6 +5,7 @@
  */
 
 #include "a2limportdialog.h"
+#include "appconstants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -133,13 +134,13 @@ A2LImportDialog::A2LImportDialog(const QVector<MapInfo>  &maps,
 
     updateCount();
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/A2LImportDialog").toByteArray());
 }
 
 void A2LImportDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/A2LImportDialog", saveGeometry());
     QDialog::closeEvent(event);
 }

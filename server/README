@@ -1,0 +1,218 @@
+romHEX14 cloud API -- reference server
+======================================
+
+This directory contains the server side of the optional cloud features
+in romHEX14.  The client (src/cloud/CloudClient.cpp) talks to a small
+JSON / multipart API; everything in this folder is a working
+implementation of that API, minus the actual ROM analysis logic --
+which is intentionally a stub.
+
+Why a stub?  The wire protocol, the auth, the rate limits, the upload
+storage, the systemd unit, the nginx config -- none of those carry any
+real value as a secret.  They are there because every cloud service
+needs them, and shipping a known-good copy means users can spin up
+their own backend in an afternoon instead of guessing.  The DTC parser
+and the feature catalog, on the other hand, represent years of work
+and are usually proprietary.  So we publish the harness and leave the
+"interesting" part to whoever runs the server.  Plug your own engine
+into engine/__init__.py and you get a working API; ship the binary
+without an engine and the API answers 503 to everything except /health.
+
+What this is, and what it is not
+--------------------------------
+
+This is the public-facing service the rx14 client posts ROMs to.  It
+validates the upload, applies rate limits, optionally checks a Bearer
+token, persists the bytes for offline review, and delegates to an
+engine module.  It does not include any DTC trigger tables, feature
+patch sets, or ECU-specific glue.  Those live in your engine module
+and are the part that makes the service actually do something useful.
+
+If you just want to verify that the rx14 client and your server can
+talk to each other -- before you have a real engine -- copy
+engine/example_canned.py over engine/__init__.py.  That returns a
+fixed list of three DTCs and two features, marks the ROM with a small
+header on disable/apply, and is enough to walk through the UI flows
+end to end.
+
+Wire protocol
+-------------
+
+GET /v1/health
+    Returns {"ok": true, "service": "cloudfx", "ts": <unix>,
+             "engine": "ready" | "absent"}.  No auth, no rate limit;
+    the rx14 client uses it to verify configuration.
+
+POST /v1/dtc/analyze    multipart: rom (required), family (optional)
+    Returns the ECU summary and per-DTC list.  See engine/__init__.py
+    for the full response shape.  IP rate-limited (default 30/h).
+
+POST /v1/dtc/disable    multipart: rom, codes (comma-separated), family
+    Returns the patched ROM as application/octet-stream.  Same rate
+    bucket as analyze.  Codes can be OBD-II ("P0420"), manufacturer
+    decimal ("16804"), or whatever your engine emits in analyze; the
+    server passes them through verbatim.
+
+POST /v1/features/detect    Bearer + multipart: rom, family
+    Returns the feature catalog applicable to this ROM.  Bearer token
+    required; see Tokens below.  Per-token rate limit (default 30/min).
+
+POST /v1/features/apply     Bearer + multipart: rom, features, family
+    Returns the patched ROM as application/octet-stream.
+
+The family hint comes from the rx14 client's Project Properties
+("Producer" dropdown) and is normalized to upper-case.  Treat it as
+advisory -- if your auto-detect disagrees, prefer your own answer and
+surface the mismatch in the response payload.
+
+All error paths return {"ok": false, "error": "...", ...} with an
+HTTP status that matches the failure class: 400 for malformed input,
+401 for missing or wrong token, 422 for a valid request the engine
+refuses to satisfy, 429 for rate limiting, 503 when the engine module
+is missing on the server.
+
+Tokens
+------
+
+Free-tier endpoints (/v1/dtc/*) need no authentication.  Pro-tier
+endpoints (/v1/features/*) require a Bearer token in the Authorization
+header.  Tokens are stored as SHA-256 hashes in /etc/cloudfx/tokens.json
+so a leaked file alone does not authorize anything; an attacker would
+need the original 32-byte secret.  The included tokens.py CLI manages
+the file:
+
+    sudo python3 tokens.py add my-laptop
+    sudo python3 tokens.py list
+    sudo python3 tokens.py revoke my-laptop
+
+The raw token is printed once, on add; if you lose it, revoke and
+issue a new one.  The token file is reread on every request, so
+add/revoke take effect without restarting the service.
+
+Running it locally
+------------------
+
+    cd server
+    python3 -m venv venv
+    . venv/bin/activate          # on Windows: venv\Scripts\activate
+    pip install -r requirements.txt
+    flask --app app run --port 5095 --debug
+
+Health check from another shell:
+
+    curl http://127.0.0.1:5095/v1/health
+
+Without an engine you'll see {"ok": true, "engine": "absent"} -- that
+is correct.  The DTC and features endpoints return 503 with a hint
+pointing at engine/__init__.py.  Drop the canned example into place
+to make them respond:
+
+    cp engine/example_canned.py engine/__init__.py.canned
+    # edit engine/__init__.py: import CannedEngine, alias as Engine
+
+For the rx14 client to use your local server, open Cloud Tools ->
+Configure and set the URL to http://127.0.0.1:5095 (no token needed
+for the DTC tab).
+
+Production deployment
+---------------------
+
+The recommended layout is the same one we run in our own deployment:
+
+    /var/www/cloudfx/                 service code (this folder)
+    /var/www/cloudfx/venv/            python virtualenv
+    /var/www/cloudfx/engine/          your real engine implementation
+    /var/lib/cloudfx/uploads/         ROMs land here, owned by service user
+    /etc/cloudfx/tokens.json          0600, owned by service user
+
+Create a service user and the directories:
+
+    adduser --system --group --home /var/www/cloudfx cloudfx
+    mkdir -p /var/lib/cloudfx/uploads /etc/cloudfx
+    chown -R cloudfx:cloudfx /var/www/cloudfx /var/lib/cloudfx /etc/cloudfx
+    chmod 700 /etc/cloudfx
+
+Install the systemd unit and enable it:
+
+    cp cloudfx.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now cloudfx
+
+The unit binds to 127.0.0.1:5095 -- it should never be exposed
+directly.  Put nginx in front of it for TLS and routing:
+
+    cp nginx.example.conf /etc/nginx/sites-available/cloudfx
+    # edit server_name and certificate paths to match your domain
+    ln -s ../sites-available/cloudfx /etc/nginx/sites-enabled/cloudfx
+    nginx -t && systemctl reload nginx
+
+certbot --nginx will produce the certificate paths nginx.example.conf
+expects.
+
+Configuration knobs
+-------------------
+
+The defaults in app.py are reasonable starting points; tweak via
+environment variables on the systemd unit (Environment=KEY=VALUE).
+
+    RX14_UPLOAD_ROOT       where ROMs are written.  Default
+                           /var/lib/cloudfx/uploads.
+    RX14_TOKENS_FILE       Pro-tier token store.  Default
+                           /etc/cloudfx/tokens.json.
+    RX14_MAX_UPLOAD_BYTES  ceiling on a single ROM.  Default 16 MiB;
+                           keep nginx client_max_body_size above this.
+
+Rate limit thresholds and ROM extension allow-list are constants near
+the top of app.py.  The buckets are in-memory, so they reset whenever
+gunicorn reloads -- fine for the volumes we see, but swap for redis
+if you scale beyond one host.
+
+Storage and privacy
+-------------------
+
+Every ROM that reaches the engine is persisted under UPLOAD_ROOT with
+a deterministic, opaque filename: timestamp + sha256 prefix + 4 bytes
+of randomness.  The user-supplied filename is recorded only in a
+sidecar JSON, never as part of the path on disk.  This rules out both
+filename-collision and path-traversal attacks in one stroke.  If you
+do not need an upload archive (legal, retention, support replays...),
+just empty UPLOAD_ROOT on a cron and nothing breaks; only the meta
+JSONs are linked in any way to a request.
+
+The sidecar JSON contains the SHA, the request kind (dtc.analyze,
+features.apply, ...), the family hint, the original filename, the
+client IP, and -- for Pro requests -- the token label that authorized
+the call.  Keep an eye on the directory if you take privacy seriously;
+a 16 MB ROM uploaded thirty times an hour adds up faster than you'd
+think.
+
+Implementing the engine
+-----------------------
+
+engine/__init__.py is the contract.  Replace the placeholder Engine
+class with one that does real work.  Method signatures and expected
+return shapes are documented inline in that file, with examples.
+
+A few things to keep in mind.  app.py calls engine methods on the
+Flask request thread; if a single call would take more than a few
+seconds, queue the work yourself and return a fid the client can poll
+later -- but the rx14 client today expects synchronous responses, so
+you will need to update both ends to do that cleanly.
+
+The engine sees the raw ROM bytes only; it does not see the upload
+filename or any other request metadata.  If you need extra inputs,
+extend the multipart contract on both ends.  Keep the response
+shapes documented in __init__.py exactly the way they are -- the
+rx14 client parses them by key name.
+
+If you want the server to advertise itself differently, change the
+"service" string in /v1/health.  The rx14 client doesn't care what it
+returns as long as the response is JSON and the server is reachable.
+
+License
+-------
+
+The contents of this directory are released under GPL-3.0-or-later,
+matching the rest of romHEX14.  The example canned engine is fine to
+copy and modify; obviously, anything you put under engine/ is yours
+and not bound by what's in this folder.

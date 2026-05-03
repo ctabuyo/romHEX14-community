@@ -5,6 +5,7 @@
  */
 
 #include "projectpropertiesdlg.h"
+#include "appconstants.h"
 #include "vehicledb.h"
 #include "io/ols/EcuAutoDetect.h"
 #include <QCompleter>
@@ -423,13 +424,13 @@ ProjectPropertiesDialog::ProjectPropertiesDialog(Project *project, QWidget *pare
     populate();
     validateRequiredFields();
 
-    restoreGeometry(QSettings("CT14", "RX14")
+    restoreGeometry(rx14::appSettings()
                     .value("dialogGeometry/ProjectPropertiesDlg").toByteArray());
 }
 
 void ProjectPropertiesDialog::closeEvent(QCloseEvent *event)
 {
-    QSettings("CT14", "RX14")
+    rx14::appSettings()
         .setValue("dialogGeometry/ProjectPropertiesDlg", saveGeometry());
     QDialog::closeEvent(event);
 }
