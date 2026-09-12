@@ -61,6 +61,26 @@ QString typeFromKpKind(uint32_t kind, int x, int y)
     return QStringLiteral("MAP");
 }
 
+// The map header's second enum (wire +8) is the OLS cell data-type code
+// (1/8/9 = u8, 2 = u16 BE, 3 = u16 LE, 4 = u32 BE, 5 = u32 LE, 6/7 = float
+// BE/LE, 10..13 = 64-bit).  Project it onto MapInfo::cellDataType so the
+// editor honours the pack's byte order instead of the project default; only
+// accept codes whose width agrees with the record's element size.
+void applyKpCellDataType(MapInfo *map, uint32_t code, int32_t elementSize)
+{
+    int width = 0;
+    switch (code) {
+    case 1: case 8: case 9: width = 1; break;
+    case 2: case 3: width = 2; break;
+    case 4: case 5: case 6: case 7: width = 4; break;
+    case 10: case 11: case 12: case 13: width = 8; break;
+    default: return;
+    }
+    if (width != elementSize) return;
+    map->cellDataType = code;
+    map->cellBigEndian = (code == 2 || code == 4 || code == 6 || code == 12);
+}
+
 bool normalizeKpAddress(uint32_t raw, uint32_t end, uint32_t universalBase,
                         uint32_t projectBase, uint32_t romSize,
                         uint32_t *fileOffset)
@@ -1962,6 +1982,7 @@ QVector<MapInfo> parseSchema750Deterministic(
             ? int(mapEnd - mapStart)
             : (logicalLength <= uint64_t(std::numeric_limits<int>::max())
                 ? int(logicalLength) : 0);
+        applyKpCellDataType(&map, subtype, elementSize);
         map.setSideProp(QStringLiteral("kpSchemaVersion"), schemaVersion);
         map.setSideProp(QStringLiteral("kpInternRecordStart"), objectStart);
         map.setSideProp(QStringLiteral("kpInternRecordEnd"), objectEnd);
@@ -2195,11 +2216,13 @@ QVector<MapInfo> parseSchema292Deterministic(
         }
         const double factor = peekF64(payload, cursor);
         const double offset = peekF64(payload, cursor + 8);
-        // At schema 292 the actual carried-data start/end pair is member
-        // +0x20.  The preceding +0x38/+0x48/+0x4c integers are separate
-        // map-properties fields and must not be mistaken for a range.
-        const uint32_t mapStart = peekU32(payload, cursor + 28);
-        const uint32_t mapEnd = peekU32(payload, cursor + 32);
+        // Schema-292 KpMapPropertiesCodec after the factor/offset pair:
+        //   +16 start, +20 end, +24 universal base (ROM size), +28/+32 zero,
+        //   +36 start again, +40/+44 zero, +48 base again, +52 zero.
+        // Verified against every schema-292 pack in testdata/KP (EDC15/EDC16
+        // Bosch packs, community #58): end - start == cols * rows * cell size.
+        const uint32_t mapStart = peekU32(payload, cursor + 16);
+        const uint32_t mapEnd = peekU32(payload, cursor + 20);
         const uint32_t mapBase = peekU32(payload, cursor + 24);
         cursor += 56; // complete schema-292 KpMapPropertiesCodec
 
@@ -2239,6 +2262,7 @@ QVector<MapInfo> parseSchema292Deterministic(
             ? int(mapEnd - mapStart)
             : (logicalLength <= uint64_t(std::numeric_limits<int>::max())
                 ? int(logicalLength) : 0);
+        applyKpCellDataType(&map, subtype, elementSize);
         map.setSideProp(QStringLiteral("kpSchemaVersion"), 292);
         map.setSideProp(QStringLiteral("kpInternRecordStart"), recordStart);
         map.setSideProp(QStringLiteral("kpInternRecordEnd"), recordEnd);
