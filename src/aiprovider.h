@@ -116,6 +116,7 @@ private:
     void processEvent(const QString &event, const QString &data);
 
     bool m_errorFired = false;  // guard against double-fire (SSE error + finished)
+    QByteArray m_errorBody;     // raw body of an HTTP error response (not SSE)
 };
 
 // ── OpenAI-compatible (OpenAI, Qwen, DeepSeek, Gemini, Groq, Ollama, etc.) ──
@@ -159,5 +160,6 @@ private:
     void processDelta(const QJsonObject &delta);
 
     bool m_errorFired = false;
+    QByteArray m_errorBody;     // raw body of an HTTP error response (not SSE)
     QString m_reasoningContent;
 };
