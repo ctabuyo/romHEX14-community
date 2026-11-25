@@ -1474,7 +1474,7 @@ void AIAssistant::manageContext()
 void AIAssistant::abortWithError(const QString &msg)
 {
     m_statusLabel->setText(tr("Error: ") + msg);
-    m_streamingBubble = nullptr;
+    dropEmptyStreamingBubble();
     showTyping(false);
 
     // Add error as assistant message so user can see it in chat
@@ -2119,13 +2119,24 @@ void AIAssistant::buildSystemPrompt()
         "7. If the most recent tool result contains an error, address it directly — never restart the conversation.\n"
         "8. Never claim that map data or tools are unavailable unless an attempted tool call returned that error. "
         "Do not invent A2L/XDF data, disassembler cross-references, routines, or datasets: they are not available "
-        "through this assistant. State only what tool results establish and label any general ECU knowledge as general.\n\n"
+        "through this assistant. State only what tool results establish and label any general ECU knowledge as general.\n"
+        "9. EFFICIENCY: you have at most %6 tool rounds per user message. Put ALL independent tool calls in ONE "
+        "response (e.g. several search_maps / get_map_values calls together) instead of one call per turn. "
+        "Search with short single concepts ('torque', 'smoke', 'boost', 'limit', 'rail', 'IQ') — map names are "
+        "often German/Bosch abbreviations, so long English phrases return nothing. Once you have enough data, "
+        "stop searching and answer.\n"
+        "10. CHARTS: the chat cannot display images. When asked for a graph, plot or curve, draw it as a monospace "
+        "ASCII chart inside a ``` code block (axes labelled, units shown), and put tables inside a ``` code block "
+        "too — markdown tables are not rendered. State the assumptions behind any derived figure (e.g. power from "
+        "torque = Nm × rpm / 9549).\n"
+        "11. Reply in the language the user wrote in.\n\n"
     )
     .arg(projectTitle)
     .arg(romSize)
     .arg(mapCount)
     .arg(selMap)
-    .arg(romVersion);
+    .arg(romVersion)
+    .arg(kMaxAgentLoops);
 
     for (auto it = m_history.crbegin(); it != m_history.crend(); ++it) {
         if (it->role != AIMessage::User) continue;
@@ -2205,8 +2216,7 @@ void AIAssistant::onCancel()
 {
     if (m_provider) m_provider->abort();
     if (m_requestTimeout) m_requestTimeout->stop();
-    if (m_chunkTimer) m_chunkTimer->stop();
-    m_streamingBubble = nullptr;
+    dropEmptyStreamingBubble();
     m_pendingToolCalls.clear();
     showTyping(false);
     appendMessage("assistant", tr("Operation cancelled."));
@@ -2601,8 +2611,11 @@ void AIAssistant::executeRecipe(const TuningRecipe &recipe)
         ).arg(recipe.description, mapList);
 
         m_accumulatedText.clear();
+        AIMessage filterMsg;
+        filterMsg.role    = AIMessage::User;
+        filterMsg.content = filterPrompt;
         m_provider->send(
-            filterPrompt, {}, {}, // no tools needed, no history
+            QString(), {filterMsg}, {}, // no tools needed, no history
             [this](const QString &chunk) {
                 QMetaObject::invokeMethod(this, [this, chunk]() {
                     m_accumulatedText += chunk;
@@ -3153,13 +3166,25 @@ void AIAssistant::applyRecipe(const QStringList &mapNames, const TuningRecipe &r
 void AIAssistant::doSend()
 {
     if (m_state != AssistantState::WORKING) return;
-    if (m_toolRound >= kMaxAgentLoops) {
-        abortWithError(tr("Reached maximum tool rounds (%1). Stopping.").arg(kMaxAgentLoops));
-        return;
-    }
+    // Once the tool budget is spent, run one last round in which the model must
+    // summarise what it found instead of silently dropping the work.  The user
+    // can reply "continue" to start a fresh budget on the same history.
+    m_wrapUpRound = (m_toolRound >= kMaxAgentLoops);
     ++m_toolRound;
 
     manageContext();
+
+    QVector<AIMessage> messages = m_history;
+    if (m_wrapUpRound) {
+        AIMessage note;
+        note.role    = AIMessage::User;
+        note.content = QStringLiteral(
+            "[System note] The tool-call budget for this request (%1 rounds) is used up. "
+            "Do NOT call any more tools. Reply to the user now: summarise what you have "
+            "found so far, list what is still unchecked, and tell them they can reply "
+            "\"continue\" to let you keep going.").arg(kMaxAgentLoops);
+        messages.append(note);  // not stored in m_history
+    }
 
     // Build tool list based on classified intent
     QVector<AIToolDef> allDefs = AIToolExecutor::toolDefinitions();
@@ -3179,7 +3204,10 @@ void AIAssistant::doSend()
 
     startAssistantBubble();
     showTyping(true);
-    m_statusLabel->setText(m_toolRound > 1 ? tr("Working… (round %1/%2)").arg(m_toolRound).arg(kMaxAgentLoops) : tr("Thinking…"));
+    if (m_wrapUpRound)
+        m_statusLabel->setText(tr("Tool limit reached — summarising…"));
+    else
+        m_statusLabel->setText(m_toolRound > 1 ? tr("Working… (round %1/%2)").arg(m_toolRound).arg(kMaxAgentLoops) : tr("Thinking…"));
 
     // Start timeout
     if (!m_requestTimeout) {
@@ -3198,7 +3226,7 @@ void AIAssistant::doSend()
     }
     m_provider->send(
         m_systemPrompt,
-        m_history,
+        messages,
         selectedDefs,  // ONLY selected tools
 
         // onChunk
@@ -3237,7 +3265,27 @@ void AIAssistant::doSend()
                         m_streamingBubble->setMarkdownContent(m_accumulatedText);
                 }
 
-                m_streamingBubble = nullptr;
+                if (m_wrapUpRound) {
+                    // Ignore any tool calls the model still tried to make —
+                    // recording them without results would break the history.
+                    const bool gaveSummary = !m_accumulatedText.trimmed().isEmpty();
+                    dropEmptyStreamingBubble();
+                    showTyping(false);
+                    if (gaveSummary)
+                        m_history.append({AIMessage::Assistant, m_accumulatedText, {}, {}, {}, {}, {}});
+                    else
+                        appendMessage("assistant", tr("⚠ Reached the tool-round limit (%1). "
+                                                      "Reply \"continue\" to keep going.").arg(kMaxAgentLoops));
+                    m_accumulatedText.clear();
+                    m_pendingReasoningContent.clear();
+                    m_pendingToolCalls.clear();
+                    m_hadToolCalls = false;
+                    m_wrapUpRound  = false;
+                    transitionTo(AssistantState::IDLE);
+                    return;
+                }
+
+                dropEmptyStreamingBubble();
                 showTyping(false);
 
                 if (m_hadToolCalls && !m_pendingToolCalls.isEmpty()) {
@@ -3268,8 +3316,8 @@ void AIAssistant::doSend()
                     }
 
                     // All non-write calls done — schedule next agent round
-                    int delay = 2000 + (m_toolRound * 500);
-                    QTimer::singleShot(delay, this, [this]() {
+                    // Short pause only; 429 responses are retried with backoff.
+                    QTimer::singleShot(500, this, [this]() {
                         if (m_state == AssistantState::WORKING) doSend();
                     });
                 } else {
@@ -3287,7 +3335,7 @@ void AIAssistant::doSend()
         [this](const QString &err) {
             QMetaObject::invokeMethod(this, [this, err]() {
                 if (m_requestTimeout) m_requestTimeout->stop();
-                m_streamingBubble = nullptr;
+                dropEmptyStreamingBubble();
                 showTyping(false);
 
                 // Rate limit retry with exponential backoff
@@ -3305,10 +3353,27 @@ void AIAssistant::doSend()
                     return;
                 }
 
-                // Context too large — trim aggressively and retry
-                if (err.contains("400") && m_retryCount < 3) {
+                // Context too large — trim aggressively and retry.  Only for
+                // genuine context-length errors: any other 400 (bad request
+                // shape, invalid model, …) will fail identically on retry.
+                const QString lower = err.toLower();
+                const bool contextTooLarge =
+                    err.contains("400") &&
+                    (lower.contains("too long") || lower.contains("context length")
+                     || lower.contains("context window") || lower.contains("maximum context")
+                     || lower.contains("too many tokens") || lower.contains("too large"));
+                if (contextTooLarge && m_retryCount < 3) {
                     ++m_retryCount;
-                    while (m_history.size() > 4) m_history.removeFirst();
+                    // Keep from the most recent user message onward so the
+                    // task survives and no ToolResult is left without its ToolUse.
+                    int lastUser = -1;
+                    for (int i = m_history.size() - 1; i >= 0; --i)
+                        if (m_history[i].role == AIMessage::User) { lastUser = i; break; }
+                    if (lastUser > 0) m_history.remove(0, lastUser);
+                    // Still too big: shrink the tool results themselves.
+                    for (AIMessage &m : m_history)
+                        if (m.role == AIMessage::ToolResult && m.toolResultJson.size() > 2000)
+                            m.toolResultJson = m.toolResultJson.left(2000) + "\n... (truncated)";
                     m_statusLabel->setText(tr("Context too large — trimming…"));
                     --m_toolRound;
                     QTimer::singleShot(1000, this, [this]() {
@@ -3474,6 +3539,20 @@ void AIAssistant::startAssistantBubble()
     m_chatLayout->insertWidget(stretchIdx, bubble);
     m_streamingBubble = bubble;
     scrollToBottom();
+}
+
+// A streaming bubble that never received text (tool-only turn, error, cancel)
+// would otherwise stay in the chat as an empty grey box.
+void AIAssistant::dropEmptyStreamingBubble()
+{
+    if (m_chunkTimer) m_chunkTimer->stop();
+    if (m_streamingBubble) {
+        if (m_accumulatedText.trimmed().isEmpty())
+            m_streamingBubble->deleteLater();
+        else
+            m_streamingBubble->setMarkdownContent(m_accumulatedText);  // flush pending render
+    }
+    m_streamingBubble = nullptr;
 }
 
 void AIAssistant::appendChunk(const QString &chunk)

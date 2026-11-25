@@ -60,6 +60,7 @@ private:
     void appendMessage(const QString &role, const QString &text);
     void appendChunk(const QString &chunk);    // adds to last assistant bubble
     void startAssistantBubble();
+    void dropEmptyStreamingBubble();
     void buildSystemPrompt();
     void doSend();                             // one async round-trip; continues via timer if tool calls pending
     void handleToolCall(const QString &callId, const QString &name, const QJsonObject &input,
@@ -140,7 +141,8 @@ private:
     bool m_hadToolCalls = false;   // flag for current round-trip
     int  m_toolRound      = 0;    // iteration counter to prevent infinite loops
     int  m_retryCount     = 0;    // 429 retry counter
-    static constexpr int kMaxAgentLoops = 10; // max tool-call round-trips per user message
+    bool m_wrapUpRound    = false; // final no-tools round after the tool budget is spent
+    static constexpr int kMaxAgentLoops = 25; // max tool-call round-trips per user message
     static constexpr int kMaxRetries    = 10; // max retries on 429 per call
 
     // Intent classification & dynamic tool selection

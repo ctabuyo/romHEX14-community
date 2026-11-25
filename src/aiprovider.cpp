@@ -19,6 +19,7 @@
 #include <QUrl>
 #include <QByteArray>
 #include <QStringList>
+#include <QSet>
 
 // ── AIProvider base ───────────────────────────────────────────────────────────
 
@@ -26,61 +27,115 @@ AIProvider::AIProvider(QObject *parent) : QObject(parent) {}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Append content blocks as a message, merging into the previous message when it
+// has the same role.  Claude requires all tool_result blocks answering one
+// assistant turn to arrive together in the next user message, and rejects
+// empty text blocks.
+static void appendClaudeBlocks(QJsonArray &arr, const QString &role, const QJsonArray &blocks)
+{
+    if (blocks.isEmpty()) return;
+    if (!arr.isEmpty()) {
+        QJsonObject last = arr.last().toObject();
+        if (last["role"].toString() == role) {
+            QJsonArray merged = last["content"].toArray();
+            for (const QJsonValue &b : blocks) merged.append(b);
+            last["content"] = merged;
+            arr[arr.size() - 1] = last;
+            return;
+        }
+    }
+    QJsonObject m;
+    m["role"]    = role;
+    m["content"] = blocks;
+    arr.append(m);
+}
+
+static QJsonObject claudeTextBlock(const QString &text)
+{
+    QJsonObject b;
+    b["type"] = "text";
+    b["text"] = text;
+    return b;
+}
+
 static QJsonArray messagesToClaude(const QVector<AIMessage> &messages)
 {
     QJsonArray arr;
+    QSet<QString> openToolUseIds;  // tool_use ids awaiting a tool_result
+
+    // Every tool_use must be answered in the very next user message.  If the
+    // history moves on without a result (cancelled confirmation, aborted
+    // round), answer it with a stub so the request stays valid.
+    auto closeOpenToolUses = [&]() {
+        for (const QString &id : std::as_const(openToolUseIds)) {
+            QJsonObject block;
+            block["type"]        = "tool_result";
+            block["tool_use_id"] = id;
+            block["content"]     = QStringLiteral("(no result: call was cancelled)");
+            appendClaudeBlocks(arr, "user", QJsonArray{block});
+        }
+        openToolUseIds.clear();
+    };
+
     for (const AIMessage &msg : messages) {
+        if (msg.role != AIMessage::ToolResult)
+            closeOpenToolUses();
         switch (msg.role) {
         case AIMessage::User: {
-            QJsonObject m;
-            m["role"] = "user";
-            m["content"] = msg.content;
-            arr.append(m);
+            if (msg.content.trimmed().isEmpty()) break;
+            appendClaudeBlocks(arr, "user", QJsonArray{claudeTextBlock(msg.content)});
             break;
         }
         case AIMessage::Assistant: {
-            QJsonObject m;
-            m["role"] = "assistant";
-            m["content"] = msg.content;
-            arr.append(m);
+            if (msg.content.trimmed().isEmpty()) break;
+            if (arr.isEmpty()) break;  // conversation must start with a user turn
+            appendClaudeBlocks(arr, "assistant", QJsonArray{claudeTextBlock(msg.content)});
             break;
         }
         case AIMessage::ToolUse: {
-            // Emitted by the assistant — wrap in assistant content block
-            QJsonObject block;
-            block["type"] = "tool_use";
-            block["id"]   = msg.toolCallId;
-            block["name"] = msg.toolName;
-            QJsonParseError err;
-            QJsonDocument doc = QJsonDocument::fromJson(msg.toolInputJson.toUtf8(), &err);
-            block["input"] = (err.error == QJsonParseError::NoError && doc.isObject())
-                             ? doc.object() : QJsonObject();
+            if (arr.isEmpty()) break;  // its results get dropped as orphans below
+            // One assistant turn: optional leading text, then every tool call
+            // the model emitted in that response.
+            QVector<AIToolCall> calls = msg.toolCalls;
+            if (calls.isEmpty() && !msg.toolCallId.isEmpty())
+                calls.append({msg.toolCallId, msg.toolName, msg.toolInputJson});
+            if (calls.isEmpty()) break;
+
             QJsonArray content;
-            content.append(block);
-            QJsonObject m;
-            m["role"]    = "assistant";
-            m["content"] = content;
-            arr.append(m);
+            if (!msg.content.trimmed().isEmpty())
+                content.append(claudeTextBlock(msg.content));
+            for (const AIToolCall &call : calls) {
+                QJsonObject block;
+                block["type"] = "tool_use";
+                block["id"]   = call.id;
+                block["name"] = call.name;
+                QJsonParseError err;
+                QJsonDocument doc = QJsonDocument::fromJson(call.argumentsJson.toUtf8(), &err);
+                block["input"] = (err.error == QJsonParseError::NoError && doc.isObject())
+                                 ? doc.object() : QJsonObject();
+                content.append(block);
+                openToolUseIds.insert(call.id);
+            }
+            appendClaudeBlocks(arr, "assistant", content);
             break;
         }
         case AIMessage::ToolResult: {
-            // User message with tool_result block
+            // Drop orphaned results (their tool_use was trimmed away) — the
+            // API rejects a tool_result with no matching tool_use.
+            if (!openToolUseIds.remove(msg.toolResultId)) break;
             QJsonObject block;
-            block["type"]       = "tool_result";
+            block["type"]        = "tool_result";
             block["tool_use_id"] = msg.toolResultId;
-            block["content"]    = msg.toolResultJson;
-            QJsonArray content;
-            content.append(block);
-            QJsonObject m;
-            m["role"]    = "user";
-            m["content"] = content;
-            arr.append(m);
+            block["content"]     = msg.toolResultJson.isEmpty()
+                                   ? QStringLiteral("(empty result)") : msg.toolResultJson;
+            appendClaudeBlocks(arr, "user", QJsonArray{block});
             break;
         }
         default:
             break;
         }
     }
+    closeOpenToolUses();
     return arr;
 }
 
@@ -217,6 +272,7 @@ void ClaudeProvider::send(const QString &systemPrompt,
     m_pendingInputJson.clear();
     m_inToolUse   = false;
     m_errorFired  = false;
+    m_errorBody.clear();
 
     // Build request body
     QJsonObject body;
@@ -246,7 +302,8 @@ void ClaudeProvider::send(const QString &systemPrompt,
         if (!m_reply) return;
         QNetworkReply::NetworkError netErr = m_reply->error();
         int statusCode = m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        QByteArray remaining = m_reply->readAll();  // any bytes not yet consumed by readyRead
+        // Error bodies are stashed by onReadyRead; append anything still unread.
+        QByteArray remaining = m_errorBody + m_reply->readAll();
         m_reply->deleteLater();
         m_reply = nullptr;
 
@@ -299,6 +356,12 @@ void ClaudeProvider::send(const QString &systemPrompt,
 void ClaudeProvider::onReadyRead()
 {
     if (!m_reply) return;
+    // An HTTP error response carries a plain JSON body, not an SSE stream.
+    // Keep it intact so finished() can report the API's error message.
+    if (m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() >= 400) {
+        m_errorBody += m_reply->readAll();
+        return;
+    }
     m_sseBuffer += QString::fromUtf8(m_reply->readAll());
 
     // Split on double newline (SSE event separator)
@@ -406,6 +469,7 @@ void OpenAICompatProvider::send(const QString &systemPrompt,
     m_sseBuffer.clear();
     m_pendingCalls.clear();
     m_errorFired = false;
+    m_errorBody.clear();
     m_reasoningContent.clear();
 
     QJsonObject body;
@@ -437,7 +501,7 @@ void OpenAICompatProvider::send(const QString &systemPrompt,
         if (!m_reply) return;
         QNetworkReply::NetworkError netErr = m_reply->error();
         int statusCode = m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        QByteArray remaining = m_reply->readAll();
+        QByteArray remaining = m_errorBody + m_reply->readAll();
         m_reply->deleteLater();
         m_reply = nullptr;
 
@@ -476,6 +540,12 @@ void OpenAICompatProvider::send(const QString &systemPrompt,
 void OpenAICompatProvider::onReadyRead()
 {
     if (!m_reply) return;
+    // An HTTP error response carries a plain JSON body, not an SSE stream.
+    // Keep it intact so finished() can report the API's error message.
+    if (m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() >= 400) {
+        m_errorBody += m_reply->readAll();
+        return;
+    }
     m_sseBuffer += QString::fromUtf8(m_reply->readAll());
 
     while (true) {
