@@ -89,7 +89,7 @@
 
 | | Minimum | Recommended |
 |---|---|---|
-| **OS** | Windows 10 / macOS 12 / Ubuntu 22.04 | Windows 11 / macOS 14 / Latest LTS |
+| **OS** | Windows 10 / macOS 14.4 / Ubuntu 22.04 | Windows 11 / macOS 15 / Latest LTS |
 | **RAM** | 4 GB | 8 GB |
 | **Disk** | 500 MB | 1 GB |
 | **Display** | 1280 × 720 | 1920 × 1080 |
@@ -129,7 +129,7 @@ cmake --build . --parallel
 <summary><strong>macOS</strong></summary>
 
 ```bash
-cmake .. -DCMAKE_PREFIX_PATH=~/Qt/6.8.3/macos
+cmake .. -DCMAKE_PREFIX_PATH=~/Qt/6.12.1/macos -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4
 make -j8
 open rx14.app
 ```
