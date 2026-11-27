@@ -71,23 +71,26 @@ jobs:
 
   macos:
     needs: version
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.3'
+          # Qt 6.12.1 includes the macOS accessibility table fixes
+          # QTBUG-134784 and QTBUG-149612.
+          version: '6.12.1'
           host: 'mac'
           target: 'desktop'
           arch: 'clang_64'
       - name: Set up ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: macos-14-qt6.8.3
+          key: macos-15-qt6.12.1
           max-size: 600M
       - name: Configure
         run: >
           cmake -B build -DCMAKE_BUILD_TYPE=Release -DRX14_PRO_BUILD=OFF
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
       # Bound to the M1 runner's core count so parallel sol2/Lua template
       # compiles don't thrash memory; ccache makes repeat builds fast. Only
